@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LINEスタンプ・絵文字 制作ツール一覧</title>
+<meta name="description" content="LINEスタンプ・絵文字制作、タグ管理、申請補助に使うツール一覧。">
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #18211c;
+    --muted: #637064;
+    --line: #d8e1d8;
+    --paper: #ffffff;
+    --mist: #f5f8f2;
+    --green: #06c755;
+    --green-deep: #047a39;
+    --blue: #2f6fd6;
+    --rose: #b5486d;
+    --amber: #a86616;
+    --violet: #6c55c9;
+    --shadow: 0 16px 40px rgba(26, 37, 31, 0.10);
+  }
+
+  * { box-sizing: border-box; }
+
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, system-ui, sans-serif;
+    background: var(--mist);
+    color: var(--ink);
+    line-height: 1.65;
+  }
+
+  a { color: inherit; }
+
+  .page {
+    min-height: 100vh;
+  }
+
+  .hero {
+    background:
+      linear-gradient(135deg, rgba(6, 199, 85, 0.13), rgba(47, 111, 214, 0.10)),
+      #fbfdf9;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .hero-inner {
+    width: calc(100% - 32px);
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 42px 0 34px;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 34px;
+    align-items: center;
+  }
+
+  .eyebrow {
+    margin: 0 0 10px;
+    color: var(--green-deep);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(38px, 4.6vw, 58px);
+    line-height: 1.08;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+    line-break: anywhere;
+  }
+
+  h1 span {
+    display: block;
+  }
+
+  .h1-context {
+    font-size: 0.72em;
+  }
+
+  .lead {
+    margin: 18px 0 0;
+    max-width: 760px;
+    color: var(--muted);
+    font-size: 16px;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 17px;
+    border-radius: 7px;
+    border: 1px solid #b8d5be;
+    background: var(--paper);
+    color: var(--green-deep);
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 14px;
+  }
+
+  .button.primary {
+    background: var(--green);
+    border-color: var(--green);
+    color: white;
+  }
+
+  .visual {
+    position: relative;
+    min-width: 0;
+    min-height: 320px;
+    display: grid;
+    place-items: center;
+  }
+
+  .browser {
+    width: 100%;
+    max-width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .browser-bar {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--line);
+    background: #f8faf7;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 99px;
+    background: #b8c6b6;
+  }
+
+  .preview {
+    min-width: 0;
+    padding: 18px;
+  }
+
+  .preview-head {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .preview-title {
+    font-weight: 900;
+    font-size: 14px;
+  }
+
+  .preview-count {
+    color: var(--green-deep);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .mini-tile {
+    min-width: 0;
+    min-height: 64px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: #f6f9f5;
+    padding: 8px;
+  }
+
+  .mini-line {
+    height: 8px;
+    border-radius: 99px;
+    background: #c9d9c7;
+    margin-top: 8px;
+  }
+
+  .mini-line.short { width: 62%; }
+  .mini-line.mid { width: 78%; background: #b8d8c0; }
+  .mini-line.hot { width: 54%; background: #95d9ae; }
+
+  main {
+    width: calc(100% - 32px);
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 30px 0 52px;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px;
+    margin: 28px 0 14px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 21px;
+    line-height: 1.3;
+  }
+
+  .section-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  .card {
+    min-width: 0;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(26, 37, 31, 0.06);
+    overflow: hidden;
+  }
+
+  .card.featured {
+    grid-column: span 2;
+  }
+
+  .card-media {
+    height: 86px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px;
+    color: white;
+    background: var(--accent);
+  }
+
+  .card-media svg {
+    width: 54px;
+    height: 54px;
+    flex: 0 0 auto;
+    opacity: 0.95;
+  }
+
+  .media-label {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .card-body {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  h3 {
+    min-width: 0;
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .desc {
+    min-width: 0;
+    margin: 10px 0 18px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .links {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .link {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 800;
+    background: #fbfdf9;
+  }
+
+  .link:hover,
+  .button:hover {
+    border-color: var(--green);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 24px;
+    padding: 0 8px;
+    margin-bottom: 10px;
+    border-radius: 99px;
+    background: #eef7ef;
+    color: var(--green-deep);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .foot {
+    width: calc(100% - 32px);
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 0 34px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  @media (max-width: 860px) {
+    .hero-inner {
+      grid-template-columns: 1fr;
+      padding-top: 32px;
+    }
+
+    .visual {
+      min-height: 230px;
+    }
+
+    .grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .card.featured {
+      grid-column: span 2;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .hero-inner,
+    main,
+    .foot {
+      width: calc(100% - 56px);
+    }
+
+    .hero-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    h1 {
+      font-size: 31px;
+      line-height: 1.16;
+      word-break: break-all;
+    }
+
+    .lead,
+    .section-note,
+    .desc,
+    h3 {
+      word-break: break-all;
+      overflow-wrap: anywhere;
+    }
+
+    .button {
+      width: 100%;
+    }
+
+    .grid {
+      grid-template-columns: 1fr;
+    }
+
+    .card.featured {
+      grid-column: span 1;
+    }
+
+    .section-head {
+      display: block;
+    }
+
+    .section-note {
+      margin-top: 4px;
+    }
+
+    .card-media {
+      height: 72px;
+    }
+
+    .card-media svg {
+      display: none;
+    }
+
+    .preview-count {
+      display: none;
+    }
+
+    .preview {
+      padding: 14px;
+    }
+
+    .mini-grid {
+      grid-template-columns: 1fr;
+      gap: 7px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <p class="eyebrow">LINE Creators Toolkit</p>
+        <h1><span class="h1-context">LINEスタンプ・絵文字</span><span>制作ツール一覧</span></h1>
+        <p class="lead">切り出し、映えチェック、タグ選定、タグ管理。<br>制作まわりの有料商品・関連ツール一覧です。</p>
+        <div class="hero-actions">
+          <a class="button primary" href="https://yayoi333.github.io/linewl/tagm.html">タグ管理を開く</a>
+          <a class="button" href="https://creator.line.me/ja/">LINEクリエイターズマーケット</a>
+        </div>
+      </div>
+
+      <div class="visual" aria-hidden="true">
+        <div class="browser">
+          <div class="browser-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+          <div class="preview">
+            <div class="preview-head">
+              <div class="preview-title">タグ確認・画像一覧</div>
+              <div class="preview-count">797 tags</div>
+            </div>
+            <div class="mini-grid">
+              <div class="mini-tile"><div class="mini-line hot"></div><div class="mini-line short"></div><div class="mini-line mid"></div></div>
+              <div class="mini-tile"><div class="mini-line mid"></div><div class="mini-line short"></div><div class="mini-line hot"></div></div>
+              <div class="mini-tile"><div class="mini-line short"></div><div class="mini-line hot"></div><div class="mini-line mid"></div></div>
+              <div class="mini-tile"><div class="mini-line mid"></div><div class="mini-line hot"></div><div class="mini-line short"></div></div>
+              <div class="mini-tile"><div class="mini-line hot"></div><div class="mini-line mid"></div><div class="mini-line short"></div></div>
+              <div class="mini-tile"><div class="mini-line short"></div><div class="mini-line mid"></div><div class="mini-line hot"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="section-head">
+      <h2>制作ツール</h2>
+      <p class="section-note">画像作成後の確認、整形、タグ付けに使うツールです。</p>
+    </div>
+
+    <section class="grid" aria-label="制作ツール">
+      <article class="card featured">
+        <div class="card-media" style="--accent: var(--green-deep);">
+          <span class="media-label">Tag Manager</span>
+          <svg viewBox="0 0 80 80" role="img" aria-label="">
+            <rect x="10" y="14" width="60" height="52" rx="6" fill="rgba(255,255,255,.22)"/>
+            <rect x="18" y="24" width="22" height="7" rx="3.5" fill="white"/>
+            <rect x="18" y="38" width="44" height="7" rx="3.5" fill="white"/>
+            <rect x="18" y="52" width="32" height="7" rx="3.5" fill="white"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <span class="badge">最新版タグマスタ 20260516</span>
+          <h3>LINEスタンプ・絵文字<br>タグ管理マネージャー</h3>
+          <p class="desc">タグ確認、画像一覧、申請前チェックに使えます。</p>
+          <div class="links">
+            <a class="link" href="https://yayoi333.github.io/linewl/tagm.html">開く</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-media" style="--accent: var(--blue);">
+          <span class="media-label">Cutout</span>
+          <svg viewBox="0 0 80 80" role="img" aria-label="">
+            <path d="M19 18h42v42H19z" fill="rgba(255,255,255,.22)"/>
+            <path d="M24 40h32M40 24v32" stroke="white" stroke-width="6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>切り出しくん</h3>
+          <p class="desc">スタンプ・絵文字制作の切り出し作業用ページ。</p>
+          <div class="links">
+            <a class="link" href="https://yayoi333.github.io/lineek/#access=e3mo8-ji4e1">開く</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-media" style="--accent: var(--rose);">
+          <span class="media-label">Emoji</span>
+          <svg viewBox="0 0 80 80" role="img" aria-label="">
+            <circle cx="40" cy="40" r="24" fill="rgba(255,255,255,.24)"/>
+            <circle cx="31" cy="34" r="4" fill="white"/>
+            <circle cx="49" cy="34" r="4" fill="white"/>
+            <path d="M28 47c6 8 18 8 24 0" fill="none" stroke="white" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>絵文字切り出しくん</h3>
+          <p class="desc">絵文字制作向けの切り出し作業用ページ。</p>
+          <div class="links">
+            <a class="link" href="https://yayoi333.github.io/lineek/#access=e3mo8-ji4e1">開く</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-media" style="--accent: var(--amber);">
+          <span class="media-label">Checker</span>
+          <svg viewBox="0 0 80 80" role="img" aria-label="">
+            <rect x="16" y="18" width="48" height="44" rx="7" fill="rgba(255,255,255,.22)"/>
+            <path d="M25 42l9 9 21-25" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>映えチェッカーくん</h3>
+          <p class="desc">見え方や印象の確認に使うチェック用ページ。</p>
+          <div class="links">
+            <a class="link" href="https://yayoi333.github.io/lineskchk/">開く</a>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="section-head">
+      <h2>タグ自動選定</h2>
+      <p class="section-note">画像からタグ対応JSONを作るためのAIツールです。</p>
+    </div>
+
+    <section class="grid" aria-label="タグ自動選定">
+      <article class="card featured">
+        <div class="card-media" style="--accent: var(--violet);">
+          <span class="media-label">AI Tagging</span>
+          <svg viewBox="0 0 80 80" role="img" aria-label="">
+            <path d="M18 24h44v32H18z" rx="6" fill="rgba(255,255,255,.24)"/>
+            <path d="M25 32h30M25 42h20M25 52h26" stroke="white" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>画像からタグを自動選定 GPT / Gem</h3>
+          <p class="desc">スタンプ・絵文字画像から、申請に使うタグ対応表JSONを作成します。</p>
+          <div class="links">
+            <a class="link" href="https://chatgpt.com/g/g-6a0365ad2f4c8191a6a0151140c7e211-linesutanhuhui-wen-zi-takudui-ying-biao-meka">Custom GPT</a>
+            <a class="link" href="https://gemini.google.com/gem/1l_0vpN-M9nyIVDHRwhhowZPM2ISxu10y?usp=sharing">Gemini Gem</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-media" style="--accent: var(--green);">
+          <span class="media-label">Copy Tool</span>
+          <svg viewBox="0 0 80 80" role="img" aria-label="">
+            <rect x="26" y="18" width="34" height="42" rx="5" fill="rgba(255,255,255,.28)"/>
+            <rect x="18" y="26" width="34" height="36" rx="5" fill="rgba(255,255,255,.42)"/>
+            <path d="M27 38h17M27 49h12" stroke="white" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>申請コピペさん</h3>
+          <p class="desc">コピペツール、一括自動タグ付けツール、ブックマークレットの保存方法と使い方。</p>
+          <div class="links">
+            <a class="link" href="https://yayoi333.github.io/linewl/copipe.html">説明ページ</a>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="section-head">
+      <h2>公式リンク</h2>
+      <p class="section-note">申請作業で使う外部ページです。</p>
+    </div>
+
+    <section class="grid" aria-label="公式リンク">
+      <article class="card">
+        <div class="card-media" style="--accent: #26362b;">
+          <span class="media-label">Official</span>
+          <svg viewBox="0 0 80 80" role="img" aria-label="">
+            <path d="M18 20h44v40H18z" fill="rgba(255,255,255,.22)"/>
+            <path d="M24 30h32M24 41h32M24 52h20" stroke="white" stroke-width="5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>LINEクリエイターズマーケット</h3>
+          <p class="desc">スタンプ・絵文字の登録、申請、管理を行う公式ページ。</p>
+          <div class="links">
+            <a class="link" href="https://creator.line.me/ja/">開く</a>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>リンク先は各ツールの公開URLです。ブラウザのブックマークに登録しておくと制作時にすぐ開けます。</p>
+  </footer>
+</div>
+</body>
+</html>
