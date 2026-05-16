@@ -433,7 +433,7 @@
       <button onclick="exportZipWithJson()" class="btn-secondary">ZIP+JSON出力</button>
       <button onclick="exportPNG()" class="btn-secondary">スクショPNG出力</button>
       <button id="ai-gen-btn" onclick="startAITagGeneration()" class="btn-ai" disabled title="画像をアップロードしてGemini APIキーを設定してください">AIタグ自動生成</button>
-      <button onclick="openGeminiSetup()" class="btn-secondary" title="Gemini APIキーを設定">🔑 Gemini設定</button>
+      <button onclick="openGeminiSetup()" class="btn-secondary" title="Gemini APIキーを設定">🔑 APIキー設定</button>
     </div>
   </header>
 
@@ -481,7 +481,7 @@
 <!-- Gemini APIキー設定モーダル -->
 <dialog id="gemini-setup-modal" style="border:none; border-radius:14px; padding:28px; max-width:480px; width:90vw; background:#f4faf0; box-shadow:0 20px 60px rgba(50,40,25,0.2);">
   <h2 class="display-font text-xl mb-2" style="color:#2d4a25;">Gemini APIキー設定</h2>
-  <p class="text-sm mb-4" style="color:#5a7250;">キーはこのタブを閉じると自動的に消えます（sessionStorageのみ保存）。</p>
+  <p class="text-sm mb-4" style="color:#5a7250;">キーはこのブラウザに保存されます（localStorageに保存・GitHubには送信されません）。</p>
   <input id="gemini-key-input" type="password" placeholder="AIza..." class="w-full mb-4 px-3 py-2 rounded" style="background:white; font-family:monospace; border:1px solid #c8dfc0; font-size:13px;">
   <p class="text-xs mb-4" style="color:#8ba07d;"><a href="https://aistudio.google.com/apikey" target="_blank" style="color:#06C755; text-decoration:underline;">Google AI Studio</a> でAPIキーを取得できます（無料）</p>
   <div class="flex justify-between gap-2">
@@ -2281,8 +2281,6 @@ function formatDate(iso) {
   } catch (e) { return iso; }
 }
 
-render();
-
 // ============================================================
 // Gemini API タグ自動生成
 // ============================================================
@@ -2291,6 +2289,8 @@ const GEMINI_SESSION_KEY = 'linesk:gemini_api_key';
 // APIキーはブラウザのlocalStorageに保存（GitHubには一切上がらない）
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_BATCH_SIZE = 10;
+
+render();
 
 function openGeminiSetup() {
   const current = localStorage.getItem(GEMINI_SESSION_KEY) || '';
@@ -2315,7 +2315,7 @@ function saveGeminiKey() {
 }
 
 function clearGeminiKey() {
-  sessionStorage.removeItem(GEMINI_SESSION_KEY);
+  localStorage.removeItem(GEMINI_SESSION_KEY);
   document.getElementById('gemini-key-input').value = '';
   document.getElementById('gemini-setup-modal').close();
   updateAiButtonState();
