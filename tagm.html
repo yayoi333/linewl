@@ -432,8 +432,7 @@
       <button onclick="openJsonPreview()" class="btn-secondary">JSONプレビュー</button>
       <button onclick="exportZipWithJson()" class="btn-secondary">ZIP+JSON出力</button>
       <button onclick="exportPNG()" class="btn-secondary">スクショPNG出力</button>
-      <button id="ai-gen-btn" onclick="startAITagGeneration()" class="btn-ai" disabled title="画像をアップロードしてGemini APIキーを設定してください">AIタグ自動生成</button>
-      <button onclick="openGeminiSetup()" class="btn-secondary" title="Gemini APIキーを設定">🔑 APIキー設定</button>
+      <label class="btn-secondary cursor-pointer" title="tags_sticker_all_unique.jsonを選択してタグマスタを更新">タグJSON読み込み<input type="file" accept=".json" onchange="loadTagMasterJson(event)" class="hidden"></label>
     </div>
   </header>
 
@@ -478,35 +477,12 @@
   </div>
 </dialog>
 
-<!-- Gemini APIキー設定モーダル -->
-<dialog id="gemini-setup-modal" style="border:none; border-radius:14px; padding:28px; max-width:480px; width:90vw; background:#f4faf0; box-shadow:0 20px 60px rgba(50,40,25,0.2);">
-  <h2 class="display-font text-xl mb-2" style="color:#2d4a25;">Gemini APIキー設定</h2>
-  <p class="text-sm mb-4" style="color:#5a7250;">キーはこのブラウザに保存されます（localStorageに保存・GitHubには送信されません）。</p>
-  <input id="gemini-key-input" type="password" placeholder="AIza..." class="w-full mb-4 px-3 py-2 rounded" style="background:white; font-family:monospace; border:1px solid #c8dfc0; font-size:13px;">
-  <p class="text-xs mb-4" style="color:#8ba07d;"><a href="https://aistudio.google.com/apikey" target="_blank" style="color:#06C755; text-decoration:underline;">Google AI Studio</a> でAPIキーを取得できます（無料）</p>
-  <div class="flex justify-between gap-2">
-    <button onclick="clearGeminiKey()" class="btn-secondary text-sm" style="color:#c08070;">クリア</button>
-    <div class="flex gap-2">
-      <button onclick="document.getElementById('gemini-setup-modal').close()" class="btn-secondary">キャンセル</button>
-      <button onclick="saveGeminiKey()" class="btn-ai">保存</button>
-    </div>
-  </div>
-</dialog>
-
-<!-- AIタグ生成 プログレスオーバーレイ -->
-<div id="ai-progress-overlay">
-  <div id="ai-progress-box">
-    <div id="ai-progress-spinner"></div>
-    <div id="ai-progress-text" style="color:#2d4a25; font-size:15px; font-weight:500;">AIタグ生成中...</div>
-    <div id="ai-progress-sub" style="color:#8ba07d; font-size:12px; margin-top:6px;"></div>
-  </div>
-</div>
 
 <script>
 // ============================================================
 // LINE 公式タグマスタ
 // ============================================================
-const TAG_MASTER = {
+let TAG_MASTER = {
   "会話 (150)": [
     "はぁ",
     "おはよう",
@@ -1229,7 +1205,6 @@ function render() {
   renderMeta();
   renderMustTags();
   renderStickers();
-  updateAiButtonState();
 }
 
 function toggleDisplayMode() {
@@ -1909,42 +1884,6 @@ function openJsonPreview() {
     white-space: pre-wrap;
     word-break: break-all;
   }
-  /* Gemini AI タグ生成 */
-  #ai-progress-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(45,61,40,0.55);
-    z-index: 9999;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 18px;
-  }
-  #ai-progress-box {
-    background: #f4faf0;
-    border-radius: 16px;
-    padding: 32px 40px;
-    text-align: center;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.25);
-  }
-  #ai-progress-spinner {
-    width: 40px; height: 40px;
-    border: 4px solid #c8dfc0;
-    border-top-color: #06C755;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 14px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .btn-ai {
-    background: #e07b00; color: white;
-    border: none; border-radius: 8px;
-    padding: 6px 14px; font-size: 13px;
-    cursor: pointer; font-family: inherit;
-    transition: background 0.15s;
-  }
-  .btn-ai:hover { background: #c46e00; }
-  .btn-ai:disabled { background: #c8b49a; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -2282,192 +2221,31 @@ function formatDate(iso) {
 }
 
 // ============================================================
-// Gemini API タグ自動生成
+// タグJSON読み込み（tags_sticker_all_unique.json → TAG_MASTER 更新）
 // ============================================================
-
-const GEMINI_SESSION_KEY = 'linesk:gemini_api_key';
-// APIキーはブラウザのlocalStorageに保存（GitHubには一切上がらない）
-const GEMINI_MODEL = 'gemini-2.5-flash';
-const GEMINI_BATCH_SIZE = 10;
 
 render();
 
-function openGeminiSetup() {
-  const current = localStorage.getItem(GEMINI_SESSION_KEY) || '';
-  const input = document.getElementById('gemini-key-input');
-  input.value = current ? '●'.repeat(20) : '';
-  input.dataset.hasKey = current ? '1' : '0';
-  input.addEventListener('focus', function onFocus() {
-    if (this.dataset.hasKey === '1') { this.value = ''; this.dataset.hasKey = '0'; }
-    this.removeEventListener('focus', onFocus);
-  }, { once: true });
-  document.getElementById('gemini-setup-modal').showModal();
-}
-
-function saveGeminiKey() {
-  const input = document.getElementById('gemini-key-input');
-  const val = input.value.trim();
-  if (val && !val.includes('●')) {
-    localStorage.setItem(GEMINI_SESSION_KEY, val);
-  }
-  document.getElementById('gemini-setup-modal').close();
-  updateAiButtonState();
-}
-
-function clearGeminiKey() {
-  localStorage.removeItem(GEMINI_SESSION_KEY);
-  document.getElementById('gemini-key-input').value = '';
-  document.getElementById('gemini-setup-modal').close();
-  updateAiButtonState();
-}
-
-function updateAiButtonState() {
-  const btn = document.getElementById('ai-gen-btn');
-  if (!btn) return;
-  const hasKey = !!localStorage.getItem(GEMINI_SESSION_KEY);
-  const hasImages = Object.keys(stickerImages).length > 0;
-  btn.disabled = !hasKey || !hasImages;
-  if (!hasKey) btn.title = 'Gemini APIキーを設定してください（🔑 Gemini設定）';
-  else if (!hasImages) btn.title = '画像をアップロードしてください';
-  else btn.title = 'AIでタグを自動生成';
-}
-
-async function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-async function startAITagGeneration() {
-  const apiKey = localStorage.getItem(GEMINI_SESSION_KEY);
-  if (!apiKey) { alert('Gemini APIキーを設定してください'); return; }
-
-  const imageKeys = Object.keys(stickerImages).sort((a, b) => parseInt(a) - parseInt(b));
-  if (imageKeys.length === 0) { alert('画像をアップロードしてください'); return; }
-
-  const existingCount = Object.keys(state.tags).length;
-  const msg = existingCount > 0
-    ? `${imageKeys.length}枚のスタンプにAIでタグを自動生成します。\n既存のタグ（${existingCount}枚分）は上書きされます。よろしいですか？`
-    : `${imageKeys.length}枚のスタンプにAIでタグを自動生成します。`;
-  if (!confirm(msg)) return;
-
-  const overlay = document.getElementById('ai-progress-overlay');
-  const progressText = document.getElementById('ai-progress-text');
-  const progressSub = document.getElementById('ai-progress-sub');
-  overlay.style.display = 'flex';
-
+async function loadTagMasterJson(event) {
+  const file = event.target.files[0];
+  if (!file) return;
   try {
-    // 1. 全画像を base64 に変換
-    progressText.textContent = '画像を準備中...';
-    progressSub.textContent = `${imageKeys.length}枚`;
-    const entries = [];
-    for (const key of imageKeys) {
-      const resp = await fetch(stickerImages[key]);
-      const blob = await resp.blob();
-      const base64 = await blobToBase64(blob);
-      entries.push({ key, base64, mimeType: blob.type || 'image/png' });
+    const text = await file.text();
+    const json = JSON.parse(text);
+    const categories = json.categories;
+    if (!categories || typeof categories !== 'object' || Array.isArray(categories)) {
+      alert('categories が見つかりません。tags_sticker_all_unique.json を選んでください。');
+      event.target.value = '';
+      return;
     }
-
-    // 2. バッチ分割して送信
-    const digits = getDisplayDigits(imageKeys);
-    const allTags = Object.values(TAG_MASTER).flat();
-    const batches = [];
-    for (let i = 0; i < entries.length; i += GEMINI_BATCH_SIZE) {
-      batches.push(entries.slice(i, i + GEMINI_BATCH_SIZE));
-    }
-
-    const allResults = {};
-    for (let bi = 0; bi < batches.length; bi++) {
-      progressText.textContent = `AIタグ生成中... (${bi + 1} / ${batches.length} バッチ)`;
-      progressSub.textContent = `${Math.round(bi / batches.length * 100)}%`;
-      const result = await callGeminiAPI(batches[bi], allTags, apiKey, digits);
-      Object.assign(allResults, result);
-      if (bi < batches.length - 1) await new Promise(r => setTimeout(r, 1500));
-    }
-
-    // 3. state.tags に反映
-    for (const [dispKey, tags] of Object.entries(allResults)) {
-      const normalized = normKey(dispKey);
-      if (normalized) state.tags[normalized] = tags.slice(0, 9);
-    }
-    saveState();
-    renderStickers();
-
-    progressText.textContent = '完了！';
-    progressSub.textContent = `${Object.keys(allResults).length}枚のタグを生成しました`;
-    await new Promise(r => setTimeout(r, 1200));
-
-  } catch (err) {
-    console.error(err);
-    alert('エラーが発生しました:\n' + err.message);
-  } finally {
-    overlay.style.display = 'none';
-  }
-}
-
-async function callGeminiAPI(entries, allTags, apiKey, digits) {
-  const tagListStr = allTags.join('　');
-
-  const systemText = `あなたはLINEスタンプ・絵文字のタグ対応表を生成するAIです。各スタンプ画像に対して必ず9個のタグを割り当て、JSONコードブロックのみで出力してください。
-
-## 使用可能なタグ（このリスト以外は絶対に使わない）
-${tagListStr}
-
-## ルール
-- 1枚につき必ず9タグ（少なくても多くても不可）
-- キャラクター・人物が描かれている場合はキャラクター名タグ（例：ウサギ、ネコ）を含める
-- キャラクターがいない場合（記号・フキダシ・模様のみ）はキャラクター名不要。絵柄の特徴・雰囲気に合ったタグを優先する
-- タグは日本語を優先。リストに含まれる「OK」「NO」「YES」「NG」などアルファベット表記はそのまま使用可
-- 書き文字がある場合はそれに対応するタグを含める
-- 外国語（英語・中国語・タイ語など）のタグは使わない
-
-## 出力形式（これ以外は出力しない）
-\`\`\`json
-{"001": ["タグ1", "タグ2", ...], "002": [...]}
-\`\`\``;
-
-  const parts = [{ text: systemText }];
-  for (const { key, base64, mimeType } of entries) {
-    const displayKey = String(parseInt(key)).padStart(digits, '0');
-    parts.push({ text: `番号:${displayKey}` });
-    parts.push({ inlineData: { mimeType, data: base64 } });
-  }
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-        generationConfig: { temperature: 0.1 }
-      })
-    }
-  );
-
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    const msg = errData.error?.message || `HTTP ${response.status}`;
-    if (response.status === 400) throw new Error(`APIキーまたはリクエストが無効です: ${msg}`);
-    if (response.status === 429) throw new Error('レート制限に達しました。しばらく待ってから再試行してください。');
-    throw new Error(msg);
-  }
-
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-  // JSONブロックを抽出
-  const match = text.match(/```json\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);
-  if (!match) throw new Error('AIの返答からJSONを取得できませんでした:\n' + text.slice(0, 300));
-
-  try {
-    return JSON.parse(match[1]);
+    TAG_MASTER = categories;
+    const total = Object.values(categories).reduce((s, v) => s + v.length, 0);
+    const catCount = Object.keys(categories).length;
+    alert(`タグマスタを更新しました。\nカテゴリ: ${catCount}個 / タグ: ${total}件\n（最終収集: ${json.last_updated || '不明'}）`);
   } catch (e) {
-    throw new Error('JSONのパースに失敗しました:\n' + match[1].slice(0, 200));
+    alert('読み込み失敗: ' + e.message);
   }
+  event.target.value = '';
 }
 </script>
 </body>
