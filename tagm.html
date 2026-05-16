@@ -1937,14 +1937,14 @@ function openJsonPreview() {
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .btn-ai {
-    background: #06C755; color: white;
+    background: #e07b00; color: white;
     border: none; border-radius: 8px;
     padding: 6px 14px; font-size: 13px;
     cursor: pointer; font-family: inherit;
     transition: background 0.15s;
   }
-  .btn-ai:hover { background: #04a848; }
-  .btn-ai:disabled { background: #a9c79a; cursor: not-allowed; }
+  .btn-ai:hover { background: #c46e00; }
+  .btn-ai:disabled { background: #c8b49a; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -2287,7 +2287,7 @@ function formatDate(iso) {
 
 const GEMINI_SESSION_KEY = 'linesk:gemini_api_key';
 // APIキーはブラウザのlocalStorageに保存（GitHubには一切上がらない）
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_BATCH_SIZE = 10;
 
 render();
