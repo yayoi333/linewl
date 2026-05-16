@@ -432,7 +432,6 @@
       <button onclick="openJsonPreview()" class="btn-secondary">JSONプレビュー</button>
       <button onclick="exportZipWithJson()" class="btn-secondary">ZIP+JSON出力</button>
       <button onclick="exportPNG()" class="btn-secondary">スクショPNG出力</button>
-      <label class="btn-secondary cursor-pointer" title="tags_sticker_all_unique.jsonを選択してタグマスタを更新">タグJSON読み込み<input type="file" accept=".json" onchange="loadTagMasterJson(event)" class="hidden"></label>
     </div>
   </header>
 
@@ -482,7 +481,7 @@
 // ============================================================
 // LINE 公式タグマスタ
 // ============================================================
-let TAG_MASTER = {
+const TAG_MASTER = {
   "会話 (150)": [
     "はぁ",
     "おはよう",
@@ -2220,33 +2219,7 @@ function formatDate(iso) {
   } catch (e) { return iso; }
 }
 
-// ============================================================
-// タグJSON読み込み（tags_sticker_all_unique.json → TAG_MASTER 更新）
-// ============================================================
-
 render();
-
-async function loadTagMasterJson(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  try {
-    const text = await file.text();
-    const json = JSON.parse(text);
-    const categories = json.categories;
-    if (!categories || typeof categories !== 'object' || Array.isArray(categories)) {
-      alert('categories が見つかりません。tags_sticker_all_unique.json を選んでください。');
-      event.target.value = '';
-      return;
-    }
-    TAG_MASTER = categories;
-    const total = Object.values(categories).reduce((s, v) => s + v.length, 0);
-    const catCount = Object.keys(categories).length;
-    alert(`タグマスタを更新しました。\nカテゴリ: ${catCount}個 / タグ: ${total}件\n（最終収集: ${json.last_updated || '不明'}）`);
-  } catch (e) {
-    alert('読み込み失敗: ' + e.message);
-  }
-  event.target.value = '';
-}
 </script>
 </body>
 </html>
