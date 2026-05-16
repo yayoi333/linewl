@@ -1,0 +1,22 @@
+# Python スクリプト・作業ファイル（push しない）
+*.py
+*.pdf
+*.json
+__pycache__/
+tag_compare_output/
+browser_session/
+
+# 作業用テキスト（robots.txt は除外しない）
+tag-list*.txt
+bookmarklet.txt
+line-all-in-one-bookmarklet.txt
+line-cm-autofill-bookmarklet.txt
+一括自動タグ付け結果.txt
+custom-gpt-instructions.txt
+gemini-gem-instructions.txt
+
+# JS作業ファイル
+line-all-in-one.js
+line-cm-autofill-bookmarklet.js
+line-emoji-tagger.js
+screenshot_pdf_page.js
