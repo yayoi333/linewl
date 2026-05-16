@@ -2288,11 +2288,12 @@ render();
 // ============================================================
 
 const GEMINI_SESSION_KEY = 'linesk:gemini_api_key';
+// APIキーはブラウザのlocalStorageに保存（GitHubには一切上がらない）
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_BATCH_SIZE = 10;
 
 function openGeminiSetup() {
-  const current = sessionStorage.getItem(GEMINI_SESSION_KEY) || '';
+  const current = localStorage.getItem(GEMINI_SESSION_KEY) || '';
   const input = document.getElementById('gemini-key-input');
   input.value = current ? '●'.repeat(20) : '';
   input.dataset.hasKey = current ? '1' : '0';
@@ -2307,7 +2308,7 @@ function saveGeminiKey() {
   const input = document.getElementById('gemini-key-input');
   const val = input.value.trim();
   if (val && !val.includes('●')) {
-    sessionStorage.setItem(GEMINI_SESSION_KEY, val);
+    localStorage.setItem(GEMINI_SESSION_KEY, val);
   }
   document.getElementById('gemini-setup-modal').close();
   updateAiButtonState();
@@ -2323,7 +2324,7 @@ function clearGeminiKey() {
 function updateAiButtonState() {
   const btn = document.getElementById('ai-gen-btn');
   if (!btn) return;
-  const hasKey = !!sessionStorage.getItem(GEMINI_SESSION_KEY);
+  const hasKey = !!localStorage.getItem(GEMINI_SESSION_KEY);
   const hasImages = Object.keys(stickerImages).length > 0;
   btn.disabled = !hasKey || !hasImages;
   if (!hasKey) btn.title = 'Gemini APIキーを設定してください（🔑 Gemini設定）';
@@ -2341,7 +2342,7 @@ async function blobToBase64(blob) {
 }
 
 async function startAITagGeneration() {
-  const apiKey = sessionStorage.getItem(GEMINI_SESSION_KEY);
+  const apiKey = localStorage.getItem(GEMINI_SESSION_KEY);
   if (!apiKey) { alert('Gemini APIキーを設定してください'); return; }
 
   const imageKeys = Object.keys(stickerImages).sort((a, b) => parseInt(a) - parseInt(b));
