@@ -219,10 +219,11 @@
     btn.textContent = '🏷 タグ付けさん';
     btn.title = 'タグJSONを貼り付けて自動タグ付けします';
     btn.style.cssText = [
-      'position:fixed', 'z-index:2147483646', 'right:12px', 'bottom:24px',
-      'background:#4caf50', 'color:#fff', 'border:none', 'border-radius:12px',
-      'padding:12px 18px', 'font:700 15px system-ui', 'cursor:pointer',
-      'box-shadow:0 4px 14px rgba(0,0,0,.22)', 'letter-spacing:.03em'
+      'position:fixed', 'z-index:2147483646', 'right:12px', 'top:12px',
+      'background:#4caf50', 'color:#fff', 'border:none', 'border-radius:14px',
+      'padding:16px 24px', 'font:700 18px system-ui', 'cursor:pointer',
+      'box-shadow:0 4px 14px rgba(0,0,0,.28)', 'letter-spacing:.03em',
+      'min-width:64px', 'min-height:64px'
     ].join(';');
     btn.onclick = run;
     document.body.appendChild(btn);
