@@ -71,16 +71,28 @@ ol,ul{padding-left:1.4em}
 <p class="note">URL欄が検索結果になったり、<code>javascript:</code> が消えている場合は実行されていません。iPhoneではSafariが比較的安定します。</p>
 </section>
 <section class="card" style="border-color: #a5b4fc;">
-<h2 style="color: #4338ca;">🦊 Firefox Android ＋ Violentmonkey 版（Opera で動かない場合）</h2>
-<p class="note">Opera Android ではブックマークレットが動作しない場合があります。Firefox Android と Violentmonkey 拡張を使うと、LINEのタグ付けページに緑のボタンが自動で表示されます。ブックマークレットより安定して動作します。</p>
+<h2 style="color: #4338ca;">📜 ユーザースクリプト版（より安定・ブックマークレット不要）</h2>
+<p class="note">ブックマークレットが動かない場合や、毎回ボタン操作なしでタグ付けしたい場合におすすめです。LINEのタグ付けページを開くと、画面右上に <b>🏷 タグ付けさん</b> ボタンが自動表示されます。</p>
+
+<b>🤖 Android（Firefox）</b>
 <ol>
 <li>Firefox for Android をインストールします。</li>
-<li>Firefox を開き、<b>Violentmonkey</b> 拡張をインストールします（Firefox Add-ons で検索）。</li>
+<li>Firefox を開き、<b>Violentmonkey</b> または <b>Tampermonkey</b> 拡張をインストールします（Firefox Add-ons で検索）。</li>
 <li>下の「スクリプトをコピー」を押してコードをコピーします。</li>
-<li>Violentmonkey のアイコンをタップ → <b>＋ 新しいスクリプトを作成</b> を押します。</li>
+<li>拡張のアイコンをタップ → <b>＋ 新しいスクリプトを作成</b> を押します。</li>
 <li>内容を全部削除してからコピーしたコードを貼り付け、<b>保存</b>します。</li>
-<li>LINE Creator Market のタグ付け申請ページを開くと、画面右下に <b>🏷 タグ付けさん</b> ボタンが表示されます。</li>
 </ol>
+
+<b>💻 PC（Edge / Chrome / Firefox）</b>
+<ol>
+<li>ブラウザの拡張機能ストアで <b>Tampermonkey</b> または <b>Violentmonkey</b> をインストールします。<br>
+  <span style="font-size:12px;color:#64748b;">Edge は Microsoft Edge アドオンストア、Chrome / Firefox は各ストアで検索。</span></li>
+<li>下の「スクリプトをコピー」を押してコードをコピーします。</li>
+<li>拡張のアイコンをクリック → <b>新しいスクリプトを作成</b> を押します。</li>
+<li>内容を全部削除してからコピーしたコードを貼り付け、<b>保存</b>します。</li>
+</ol>
+
+<p class="note">インストール後、LINE Creator Market のタグ付け申請ページを開くと画面右上に <b>🏷 タグ付けさん</b> ボタンが表示されます。</p>
 <p><button id="btn-copy-userscript" type="button">スクリプトをコピー</button> <span id="status-userscript" class="note"></span></p>
 <textarea id="code-userscript" readonly style="height:160px;"></textarea>
 </section>
@@ -94,11 +106,12 @@ ol,ul{padding-left:1.4em}
 <section class="card">
 <h2>対応しやすいブラウザ</h2>
 <ul>
-<li>PC: Chrome, Edge, Firefox, Safari, Brave, Vivaldi</li>
-<li>Android: Chrome, Edge, Firefox, Brave</li>
-<li>iPhone / iPad: Safari, Chrome, Edge</li>
+<li><b>PC</b>: Chrome, Edge, Firefox, Safari, Brave, Vivaldi（ブックマークレット）</li>
+<li><b>PC でより安定</b>: Edge / Chrome / Firefox ＋ Tampermonkey または Violentmonkey（ユーザースクリプト版）</li>
+<li><b>Android</b>: Firefox ＋ Tampermonkey または Violentmonkey（ユーザースクリプト版がおすすめ）</li>
+<li><b>iPhone / iPad</b>: Safari のブックマークレットをまず試してください。動かない場合は App Store の「Userscripts」アプリ（無料）または「Tampermonkey」（有料）が使えます。</li>
 </ul>
-<p class="note">スマホ版ChromeやEdgeはブックマーク編集画面の場所が端末ごとに少し違います。Safariは登録できても、クリップボード読み取りで確認ダイアログが出ることがあります。</p>
+<p class="note">Android の Chrome・Opera・Edge はブラウザ拡張機能に対応していないため、ユーザースクリプト版は使えません。ブックマークレットをお試しください。スマホ版 Safari はクリップボード読み取りで確認ダイアログが出ることがあります。</p>
 </section>
 </main>
 <script>
