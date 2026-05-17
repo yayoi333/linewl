@@ -70,6 +70,20 @@ ol,ul{padding-left:1.4em}
 </ol>
 <p class="note">URL欄が検索結果になったり、<code>javascript:</code> が消えている場合は実行されていません。iPhoneではSafariが比較的安定します。</p>
 </section>
+<section class="card" style="border-color: #a5b4fc;">
+<h2 style="color: #4338ca;">🦊 Firefox Android ＋ Violentmonkey 版（Opera で動かない場合）</h2>
+<p class="note">Opera Android ではブックマークレットが動作しない場合があります。Firefox Android と Violentmonkey 拡張を使うと、LINEのタグ付けページに緑のボタンが自動で表示されます。ブックマークレットより安定して動作します。</p>
+<ol>
+<li>Firefox for Android をインストールします。</li>
+<li>Firefox を開き、<b>Violentmonkey</b> 拡張をインストールします（Firefox Add-ons で検索）。</li>
+<li>下の「スクリプトをコピー」を押してコードをコピーします。</li>
+<li>Violentmonkey のアイコンをタップ → <b>＋ 新しいスクリプトを作成</b> を押します。</li>
+<li>内容を全部削除してからコピーしたコードを貼り付け、<b>保存</b>します。</li>
+<li>LINE Creator Market のタグ付け申請ページを開くと、画面右下に <b>🏷 タグ付けさん</b> ボタンが表示されます。</li>
+</ol>
+<p><button id="btn-copy-userscript" type="button">スクリプトをコピー</button> <span id="status-userscript" class="note"></span></p>
+<textarea id="code-userscript" readonly style="height:160px;"></textarea>
+</section>
 <section class="card">
 <h2>統合版</h2>
 <p class="note">従来どおり、タイトル・説明、メイン画像番号、タグJSONをひとつのパネルで扱う版です。PC向けです。</p>
@@ -105,5 +119,28 @@ btn.onclick=async()=>{
   }
 };
 });
+
+// Violentmonkey ユーザースクリプトを tag.user.js から読み込んでテキストエリアに表示
+fetch("tag.user.js").then(r=>r.text()).then(text=>{
+  const ta=document.getElementById("code-userscript");
+  if(ta) ta.value=text;
+}).catch(()=>{});
+
+// スクリプトをコピーボタン
+const usBtn=document.getElementById("btn-copy-userscript");
+if(usBtn){
+  usBtn.onclick=async()=>{
+    const ta=document.getElementById("code-userscript");
+    const st=document.getElementById("status-userscript");
+    try{
+      await navigator.clipboard.writeText(ta.value);
+      st.textContent="コピーしました ✓"; st.className="ok";
+    }catch{
+      ta.focus(); ta.select();
+      document.execCommand("copy");
+      st.textContent="選択しました。手動でコピーしてください";
+    }
+  };
+}
 </script>
 </html>
