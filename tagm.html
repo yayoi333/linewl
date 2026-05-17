@@ -1600,14 +1600,14 @@ function buildPickerHTML() {
 
 function attachPickerEvents(popover) {
   popover.querySelectorAll('.category-tab').forEach(tab => {
-    tab.addEventListener('mousedown', e => {
+    tab.addEventListener('pointerdown', e => {
       e.preventDefault();
       currentPickerCategory = tab.dataset.cat;
       refreshPicker();
     });
   });
   popover.querySelectorAll('.tag-option').forEach(opt => {
-    opt.addEventListener('mousedown', e => {
+    opt.addEventListener('pointerdown', e => {
       e.preventDefault();
       const tag = opt.dataset.tag;
       selectTagFromPicker(tag);
@@ -1660,7 +1660,7 @@ function handleTagInputKey(event, type, no) {
   }
 }
 
-document.addEventListener('mousedown', e => {
+document.addEventListener('pointerdown', e => {
   const picker = document.getElementById('active-tag-picker');
   if (!picker) return;
   if (picker.contains(e.target)) return;
