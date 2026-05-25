@@ -2370,8 +2370,9 @@ async function handleZipUpload(event) {
         continue;
       }
       const match = baseName.match(/(\d+)/);
-      if (!match) continue;
-      const no = normKey(match[1]);
+      const no = match
+        ? normKey(match[1])
+        : baseName.replace(/\.(png|jpe?g|gif|webp)$/i, '');
       newImages[no] = URL.createObjectURL(blob);
       newImageBlobs[no] = blob; // IDB用
     }
