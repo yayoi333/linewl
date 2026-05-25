@@ -1297,12 +1297,16 @@ function normKey(k) {
 // 表示用パディング：全キーの最大値から桁数を自動決定
 function getDisplayDigits(keys) {
   if (keys.length === 0) return 2;
-  const maxNum = Math.max(...keys.map(k => parseInt(k, 10) || 0));
+  const nums = keys.map(k => parseInt(k, 10)).filter(n => !isNaN(n));
+  if (nums.length === 0) return 2;
+  const maxNum = Math.max(...nums);
   return Math.max(2, String(maxNum).length);
 }
 
 function displayKey(k, digits) {
-  return String(parseInt(k, 10) || 0).padStart(digits, '0');
+  const n = parseInt(k, 10);
+  if (isNaN(n)) return k; // 数字でないキー（ファイル名）はそのまま返す
+  return String(n).padStart(digits, '0');
 }
 
 function getStickerImage(no) {
@@ -1605,7 +1609,13 @@ function renderStickers() {
   // ミニマルモード：画像とタグのキーをunion（タグだけ・画像だけのどちらでもOK）
   if (displayMode === 'minimal') {
     const unionSet = new Set([...tagKeys.map(normKey), ...imageKeys]);
-    const sortedKeys = Array.from(unionSet).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+    const sortedKeys = Array.from(unionSet).sort((a, b) => {
+      const na = parseInt(a, 10), nb = parseInt(b, 10);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      if (!isNaN(na)) return -1; // 数値キーを先に
+      if (!isNaN(nb)) return 1;
+      return a.localeCompare(b); // 両方非数値はアルファベット順
+    });
     const digits = getDisplayDigits(sortedKeys);
     const cellSize = getSavedCellSize();
 
@@ -1661,7 +1671,13 @@ function renderStickers() {
 
   // 画像数 vs タグ数の不一致を吸収するため、unionで全キーを生成
   const unionSet = new Set([...tagKeys.map(normKey), ...imageKeys]);
-  const sortedNorm = Array.from(unionSet).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+  const sortedNorm = Array.from(unionSet).sort((a, b) => {
+      const na = parseInt(a, 10), nb = parseInt(b, 10);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      if (!isNaN(na)) return -1; // 数値キーを先に
+      if (!isNaN(nb)) return 1;
+      return a.localeCompare(b); // 両方非数値はアルファベット順
+    });
   const digits = getDisplayDigits(sortedNorm);
 
   // メイン/タブ画像のセル（フルモードでも表示。トグルでオフ可能）
@@ -2391,8 +2407,10 @@ async function addPngFiles(files) {
       continue;
     }
     const match = baseName.match(/(\d+)/);
-    if (!match) continue;
-    const no = normKey(match[1]);
+    // 数字があれば番号キー、なければファイル名（拡張子除く）をキーに使用
+    const no = match
+      ? normKey(match[1])
+      : baseName.replace(/\.(png|jpe?g|gif|webp)$/i, '');
     if (stickerImages[no]) {
       try { URL.revokeObjectURL(stickerImages[no]); } catch(e){}
     }
