@@ -432,21 +432,56 @@
     background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
     background-color: #f0f0f0;
   }
-  /* カスタムカラー入力 */
-  .bg-color-input {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid #d4e6c8;
+  /* 読み込みボタン（青系） */
+  .btn-upload {
+    background: #f0f7ff;
+    color: #1a5080;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 500;
     cursor: pointer;
-    padding: 0;
-    overflow: hidden;
-    background: none;
-    flex-shrink: 0;
-    outline: none;
+    border: 1px solid #90c0e0;
+    font-size: 13px;
+    transition: all 0.15s;
+    font-family: inherit;
   }
-  .bg-color-input::-webkit-color-swatch-wrapper { padding: 0; }
-  .bg-color-input::-webkit-color-swatch { border: none; border-radius: 50%; }
+  .btn-upload:hover { background: #ddeeff; border-color: #60a0d0; }
+
+  /* 書き出しボタン（オレンジ系） */
+  .btn-export {
+    background: #fff8f0;
+    color: #7a4010;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid #d8a870;
+    font-size: 13px;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-export:hover { background: #ffeedd; border-color: #c08050; }
+
+  /* グループラベル */
+  .btn-group-label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .btn-group-label.blue {
+    color: #2060a0;
+    background: #e8f4ff;
+    border: 1px solid #90c0e0;
+  }
+  .btn-group-label.orange {
+    color: #8a4010;
+    background: #fff0e0;
+    border: 1px solid #d8a870;
+  }
 
   /* ミニマルモード時は必須タグパネル等を隠す */
   .display-minimal #must-tags-panel { display: none; }
@@ -489,55 +524,76 @@
       <h1 class="display-font text-4xl tracking-tight mt-1" style="color: #2d4a25;">LINEスタンプ・絵文字 タグマネージャー</h1>
       <p class="text-sm mt-1" style="color: #6b8060;">LINEスタンプと絵文字のタグ付け・確認ツール</p>
     </div>
-    <div class="flex gap-2 flex-wrap items-center">
-      <button id="mode-toggle" onclick="toggleDisplayMode()" class="btn-secondary"></button>
-      <!-- 背景色ピッカー（常時表示） -->
-      <div class="bg-picker-row" id="bg-picker">
-        <span>背景色</span>
-        <button class="bg-swatch bg-swatch-checker" data-value="checker"
-                onclick="setThumbBg('checker')" title="チェック模様（透明確認用）"></button>
-        <button class="bg-swatch" data-value="#ffffff"
-                onclick="setThumbBg('#ffffff')"
-                style="background:#ffffff; box-shadow: inset 0 0 0 1px #ccc;"
-                title="白"></button>
-        <button class="bg-swatch" data-value="#e7f1de"
-                onclick="setThumbBg('#e7f1de')"
-                style="background:#e7f1de; box-shadow: inset 0 0 0 1px #c8dfc0;"
-                title="デフォルト（薄緑）"></button>
-        <button class="bg-swatch" data-value="#f4faf0"
-                onclick="setThumbBg('#f4faf0')"
-                style="background:#f4faf0; box-shadow: inset 0 0 0 1px #c8dfc0;"
-                title="ページ色（透明感）"></button>
-        <button class="bg-swatch" data-value="#222222"
-                onclick="setThumbBg('#222222')"
-                style="background:#222222;"
-                title="黒"></button>
-        <input type="color" class="bg-color-input" id="bg-custom-color"
-               value="#aaddff" title="カスタムカラー"
-               oninput="setThumbBg(this.value)">
+    <!-- ボタン群：3グループ縦並び -->
+    <div class="flex flex-col gap-2 items-end">
+
+      <!-- グループ1: 表示設定（緑系・既存スタイル） -->
+      <div class="flex gap-2 items-center flex-wrap justify-end">
+        <button id="mode-toggle" onclick="toggleDisplayMode()" class="btn-secondary"></button>
+        <!-- 背景色ピッカー -->
+        <div class="bg-picker-row" id="bg-picker">
+          <span>背景色</span>
+          <button class="bg-swatch bg-swatch-checker" data-value="checker"
+                  onclick="setThumbBg('checker')" title="チェック模様（透明確認用）"></button>
+          <button class="bg-swatch" data-value="#ffffff"
+                  onclick="setThumbBg('#ffffff')"
+                  style="background:#ffffff; box-shadow: inset 0 0 0 1px #bbb;"
+                  title="白"></button>
+          <button class="bg-swatch" data-value="#FF00FF"
+                  onclick="setThumbBg('#FF00FF')"
+                  style="background:#FF00FF;"
+                  title="マゼンタ"></button>
+          <button class="bg-swatch" data-value="#87CEEB"
+                  onclick="setThumbBg('#87CEEB')"
+                  style="background:#87CEEB;"
+                  title="空色（LINE青空）"></button>
+          <button class="bg-swatch" data-value="#111111"
+                  onclick="setThumbBg('#111111')"
+                  style="background:#111111;"
+                  title="黒"></button>
+          <button class="bg-swatch" data-value="#06C755"
+                  onclick="setThumbBg('#06C755')"
+                  style="background:#06C755;"
+                  title="LINE グリーン"></button>
+          <button class="bg-swatch" data-value="#FF8000"
+                  onclick="setThumbBg('#FF8000')"
+                  style="background:#FF8000;"
+                  title="オレンジ"></button>
+        </div>
+        <!-- サイズスライダー -->
+        <div class="size-slider-wrapper" id="size-slider">
+          <label id="size-label" style="white-space:nowrap;">SIZE</label>
+          <button class="size-btn" onclick="adjustSize(-10)" aria-label="小さく">−</button>
+          <input type="range" id="cell-size-range" min="40" max="300" step="4" oninput="handleSizeInput(this.value)">
+          <button class="size-btn" onclick="adjustSize(10)" aria-label="大きく">＋</button>
+          <span id="cell-size-display" style="font-size: 11px; color: #5a7250; min-width: 36px; text-align: right;"></span>
+        </div>
+        <button id="special-toggle-mini" onclick="toggleSpecialImages()" class="btn-secondary" style="display:none;"></button>
       </div>
-      <!-- サイズスライダー（常時表示・モードで切替） -->
-      <div class="size-slider-wrapper" id="size-slider">
-        <label id="size-label">SIZE</label>
-        <button class="size-btn" onclick="adjustSize(-10)" aria-label="小さく">−</button>
-        <input type="range" id="cell-size-range" min="40" max="300" step="4" oninput="handleSizeInput(this.value)">
-        <button class="size-btn" onclick="adjustSize(10)" aria-label="大きく">＋</button>
-        <span id="cell-size-display" style="font-size: 11px; color: #5a7250; min-width: 32px; text-align: right;"></span>
+
+      <!-- グループ2: 読み込み（青系） -->
+      <div class="flex gap-1.5 items-center flex-wrap justify-end">
+        <span class="btn-group-label blue">読み込み</span>
+        <label class="btn-upload cursor-pointer">
+          ZIP アップロード
+          <input type="file" accept=".zip" onchange="handleZipUpload(event)" class="hidden">
+        </label>
+        <label class="btn-upload cursor-pointer">
+          PNG アップロード
+          <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" multiple onchange="handlePngUpload(event)" class="hidden">
+        </label>
+        <button onclick="openImport()" class="btn-upload">JSON インポート</button>
       </div>
-      <button id="special-toggle-mini" onclick="toggleSpecialImages()" class="btn-secondary" style="display:none;"></button>
-      <label class="btn-secondary cursor-pointer">
-        ZIPアップロード
-        <input type="file" accept=".zip" onchange="handleZipUpload(event)" class="hidden">
-      </label>
-      <label class="btn-secondary cursor-pointer">
-        PNGアップロード
-        <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" multiple onchange="handlePngUpload(event)" class="hidden">
-      </label>
-      <button onclick="openImport()" class="btn-secondary">JSONインポート</button>
-      <button onclick="exportJSON()" class="btn-secondary">JSONエクスポート</button>
-      <button onclick="openJsonPreview()" class="btn-secondary">JSONプレビュー</button>
-      <button onclick="exportZipWithJson()" class="btn-secondary">ZIP+JSON出力</button>
-      <button onclick="exportPNG()" class="btn-secondary">スクショPNG出力</button>
+
+      <!-- グループ3: 書き出し（オレンジ系） -->
+      <div class="flex gap-1.5 items-center flex-wrap justify-end">
+        <span class="btn-group-label orange">書き出し</span>
+        <button onclick="exportJSON()" class="btn-export">JSON エクスポート</button>
+        <button onclick="openJsonPreview()" class="btn-export">JSON プレビュー</button>
+        <button onclick="exportZipWithJson()" class="btn-export">ZIP+JSON 保存</button>
+        <button onclick="exportPNG()" class="btn-export">スクショ PNG 出力</button>
+      </div>
+
     </div>
   </header>
 
@@ -551,8 +607,6 @@
     タグデータはブラウザに自動保存 · 画像はメモリ上のみ（リロード時は再アップロード）
     <br>
     タグマスタ <span id="tag-master-date">20260520</span>
-    <br>
-    <button onclick="resetAll()" class="mt-2 text-xs underline" style="color: #c08070;">全データを削除</button>
     <div style="margin-top: 28px; font-size: 10px; color: #c8dfc0; letter-spacing: 0.08em; font-family: 'Zen Kaku Gothic New', sans-serif;">
       Developed by yayoi 2026
     </div>
@@ -1227,7 +1281,7 @@ let zipEntries = {};    // 元ZIPの全ファイル { filename: blob, ... }
 let originalZipName = '';
 let displayMode = localStorage.getItem('linesk:displayMode') || 'full'; // 'full' | 'minimal'
 let showSpecialImages = localStorage.getItem('linesk:showSpecial') !== 'false'; // デフォルトtrue
-let thumbBg = localStorage.getItem('linesk:thumbBg') || '#e7f1de'; // スタンプ表示背景色
+let thumbBg = localStorage.getItem('linesk:thumbBg') || 'checker'; // スタンプ表示背景色
 let fullThumbSize = parseInt(localStorage.getItem('linesk:thumbSize'), 10) || 72; // フルモードのサムネサイズ
 
 // ============================================================
@@ -1406,14 +1460,14 @@ function syncSizeSlider() {
     const cs = getSavedCellSize();
     slider.value = cs;
     if (disp) disp.textContent = cs + 'px';
-    if (label) label.textContent = 'CELL';
+    if (label) label.textContent = 'セルサイズ';
   } else {
     slider.min = 40;
     slider.max = 200;
     slider.step = 4;
     slider.value = fullThumbSize;
     if (disp) disp.textContent = fullThumbSize + 'px';
-    if (label) label.textContent = 'THUMB';
+    if (label) label.textContent = 'スタンプ表示サイズ';
   }
 }
 
@@ -1462,7 +1516,12 @@ function renderMeta() {
           ${state.importedAt ? `<div class="text-xs mt-1" style="color:#8ba07d;">${formatDate(state.importedAt)} インポート</div>` : ''}
         </div>
       </div>
-      ${actions.length > 0 ? `<div class="flex gap-3 mt-3 pt-3" style="border-top: 1px dashed #d4e6c8;">${actions.join('')}</div>` : ''}
+      <div class="flex items-center justify-between flex-wrap gap-2 mt-3 pt-3" style="border-top: 1px dashed #d4e6c8;">
+        <div class="flex gap-3 flex-wrap">
+          ${actions.join('')}
+        </div>
+        <button onclick="resetAll()" class="meta-action-link danger" style="font-size:11px; flex-shrink:0;">全データ削除</button>
+      </div>
     </div>
   `;
 }
