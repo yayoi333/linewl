@@ -115,16 +115,17 @@
     letter-spacing: 0.02em;
   }
   .sticker-thumb {
-    width: 72px;
-    height: 72px;
+    width: var(--thumb-size, 72px);
+    height: var(--thumb-size, 72px);
     border-radius: 8px;
-    background: #e7f1de;
+    background: var(--thumb-bg, #e7f1de);
     border: 1px solid #d4e6c8;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     overflow: hidden;
+    transition: width 0.1s, height 0.1s;
   }
   .sticker-thumb img {
     width: 100%;
@@ -292,11 +293,11 @@
     border-width: 1.5px;
   }
   .minimal-cell.special .thumb {
-    background: #ffffff;
+    background: var(--thumb-bg, #ffffff);
   }
   .minimal-cell .thumb {
     width: 100%;
-    background: #e7f1de;
+    background: var(--thumb-bg, #e7f1de);
     border-radius: 6px;
     overflow: hidden;
     display: flex;
@@ -327,9 +328,9 @@
     line-height: 1;
   }
 
-  /* サイズスライダー */
+  /* サイズスライダー（常時表示） */
   .size-slider-wrapper {
-    display: none;
+    display: flex;
     align-items: center;
     gap: 6px;
     padding: 0 8px;
@@ -338,7 +339,6 @@
     border-radius: 8px;
     height: 38px;
   }
-  body.display-minimal .size-slider-wrapper { display: flex; }
   .size-slider-wrapper label {
     font-size: 11px;
     color: #6b8060;
@@ -367,6 +367,86 @@
   }
   .size-btn:hover { background: #d8e9cb; }
   .size-btn:active { background: #cce5bf; }
+
+  /* =========================================
+     チェック模様背景（透明PNG確認用）
+     ========================================= */
+  body.thumb-checker .sticker-thumb,
+  body.thumb-checker .minimal-cell .thumb {
+    background-image:
+      linear-gradient(45deg, #c0c0c0 25%, transparent 25%),
+      linear-gradient(-45deg, #c0c0c0 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #c0c0c0 75%),
+      linear-gradient(-45deg, transparent 75%, #c0c0c0 75%) !important;
+    background-size: 12px 12px !important;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0px !important;
+    background-color: #f0f0f0 !important;
+  }
+
+  /* =========================================
+     背景色ピッカー
+     ========================================= */
+  .bg-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 10px;
+    background: white;
+    border: 1px solid #a9c79a;
+    border-radius: 8px;
+    height: 38px;
+  }
+  .bg-picker-row > span {
+    font-size: 11px;
+    color: #6b8060;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    margin-right: 3px;
+  }
+  .bg-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+    outline: none;
+    transition: transform 0.12s;
+  }
+  .bg-swatch:hover { transform: scale(1.18); }
+  .bg-swatch.active {
+    border-color: #5fa856 !important;
+    box-shadow: 0 0 0 1.5px #5fa856;
+  }
+  /* チェック模様スウォッチ */
+  .bg-swatch-checker {
+    background-image:
+      linear-gradient(45deg, #aaa 25%, transparent 25%),
+      linear-gradient(-45deg, #aaa 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #aaa 75%),
+      linear-gradient(-45deg, transparent 75%, #aaa 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+    background-color: #f0f0f0;
+  }
+  /* カスタムカラー入力 */
+  .bg-color-input {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #d4e6c8;
+    cursor: pointer;
+    padding: 0;
+    overflow: hidden;
+    background: none;
+    flex-shrink: 0;
+    outline: none;
+  }
+  .bg-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+  .bg-color-input::-webkit-color-swatch { border: none; border-radius: 50%; }
 
   /* ミニマルモード時は必須タグパネル等を隠す */
   .display-minimal #must-tags-panel { display: none; }
@@ -411,11 +491,37 @@
     </div>
     <div class="flex gap-2 flex-wrap items-center">
       <button id="mode-toggle" onclick="toggleDisplayMode()" class="btn-secondary"></button>
+      <!-- 背景色ピッカー（常時表示） -->
+      <div class="bg-picker-row" id="bg-picker">
+        <span>背景色</span>
+        <button class="bg-swatch bg-swatch-checker" data-value="checker"
+                onclick="setThumbBg('checker')" title="チェック模様（透明確認用）"></button>
+        <button class="bg-swatch" data-value="#ffffff"
+                onclick="setThumbBg('#ffffff')"
+                style="background:#ffffff; box-shadow: inset 0 0 0 1px #ccc;"
+                title="白"></button>
+        <button class="bg-swatch" data-value="#e7f1de"
+                onclick="setThumbBg('#e7f1de')"
+                style="background:#e7f1de; box-shadow: inset 0 0 0 1px #c8dfc0;"
+                title="デフォルト（薄緑）"></button>
+        <button class="bg-swatch" data-value="#f4faf0"
+                onclick="setThumbBg('#f4faf0')"
+                style="background:#f4faf0; box-shadow: inset 0 0 0 1px #c8dfc0;"
+                title="ページ色（透明感）"></button>
+        <button class="bg-swatch" data-value="#222222"
+                onclick="setThumbBg('#222222')"
+                style="background:#222222;"
+                title="黒"></button>
+        <input type="color" class="bg-color-input" id="bg-custom-color"
+               value="#aaddff" title="カスタムカラー"
+               oninput="setThumbBg(this.value)">
+      </div>
+      <!-- サイズスライダー（常時表示・モードで切替） -->
       <div class="size-slider-wrapper" id="size-slider">
-        <label>SIZE</label>
-        <button class="size-btn" onclick="adjustCellSize(-10)" aria-label="小さく">−</button>
-        <input type="range" id="cell-size-range" min="50" max="300" step="5" oninput="setCellSize(this.value)">
-        <button class="size-btn" onclick="adjustCellSize(10)" aria-label="大きく">＋</button>
+        <label id="size-label">SIZE</label>
+        <button class="size-btn" onclick="adjustSize(-10)" aria-label="小さく">−</button>
+        <input type="range" id="cell-size-range" min="40" max="300" step="4" oninput="handleSizeInput(this.value)">
+        <button class="size-btn" onclick="adjustSize(10)" aria-label="大きく">＋</button>
         <span id="cell-size-display" style="font-size: 11px; color: #5a7250; min-width: 32px; text-align: right;"></span>
       </div>
       <button id="special-toggle-mini" onclick="toggleSpecialImages()" class="btn-secondary" style="display:none;"></button>
@@ -1121,6 +1227,8 @@ let zipEntries = {};    // 元ZIPの全ファイル { filename: blob, ... }
 let originalZipName = '';
 let displayMode = localStorage.getItem('linesk:displayMode') || 'full'; // 'full' | 'minimal'
 let showSpecialImages = localStorage.getItem('linesk:showSpecial') !== 'false'; // デフォルトtrue
+let thumbBg = localStorage.getItem('linesk:thumbBg') || '#e7f1de'; // スタンプ表示背景色
+let fullThumbSize = parseInt(localStorage.getItem('linesk:thumbSize'), 10) || 72; // フルモードのサムネサイズ
 
 // ============================================================
 // Key Normalization
@@ -1204,6 +1312,7 @@ function render() {
   renderMeta();
   renderMustTags();
   renderStickers();
+  syncSizeSlider();
 }
 
 function toggleDisplayMode() {
@@ -1211,7 +1320,7 @@ function toggleDisplayMode() {
   localStorage.setItem('linesk:displayMode', displayMode);
   // ミニマル時に開いていたピッカーは閉じる
   closeTagPicker();
-  render();
+  render(); // render内でsyncSizeSliderも呼ばれる
 }
 
 function setCellSize(px) {
@@ -1234,6 +1343,78 @@ function adjustCellSize(delta) {
 
 function getSavedCellSize() {
   return parseInt(localStorage.getItem('linesk:cellSize'), 10) || 130;
+}
+
+// ============================================================
+// 背景色ピッカー
+// ============================================================
+function setThumbBg(value) {
+  thumbBg = value;
+  localStorage.setItem('linesk:thumbBg', value);
+  // チェック模様：bodyクラスで制御
+  document.body.classList.toggle('thumb-checker', value === 'checker');
+  // 通常カラー：CSS変数で制御
+  if (value !== 'checker') {
+    document.documentElement.style.setProperty('--thumb-bg', value);
+  }
+  // スウォッチのactive状態を更新
+  document.querySelectorAll('.bg-swatch').forEach(el => {
+    el.classList.toggle('active', el.dataset.value === value);
+  });
+}
+
+// ============================================================
+// サイズ変更（フル＆ミニマル共通）
+// ============================================================
+function setThumbSize(px) {
+  fullThumbSize = Math.max(40, Math.min(200, parseInt(px, 10) || 72));
+  document.documentElement.style.setProperty('--thumb-size', fullThumbSize + 'px');
+  localStorage.setItem('linesk:thumbSize', fullThumbSize);
+  const disp = document.getElementById('cell-size-display');
+  if (disp && displayMode === 'full') disp.textContent = fullThumbSize + 'px';
+}
+
+function handleSizeInput(value) {
+  if (displayMode === 'minimal') {
+    setCellSize(value);
+  } else {
+    setThumbSize(value);
+    const slider = document.getElementById('cell-size-range');
+    if (slider) slider.value = fullThumbSize;
+  }
+}
+
+function adjustSize(delta) {
+  if (displayMode === 'minimal') {
+    adjustCellSize(delta);
+  } else {
+    setThumbSize(fullThumbSize + delta);
+    const slider = document.getElementById('cell-size-range');
+    if (slider) slider.value = fullThumbSize;
+  }
+}
+
+function syncSizeSlider() {
+  const slider = document.getElementById('cell-size-range');
+  const disp = document.getElementById('cell-size-display');
+  const label = document.getElementById('size-label');
+  if (!slider) return;
+  if (displayMode === 'minimal') {
+    slider.min = 50;
+    slider.max = 300;
+    slider.step = 5;
+    const cs = getSavedCellSize();
+    slider.value = cs;
+    if (disp) disp.textContent = cs + 'px';
+    if (label) label.textContent = 'CELL';
+  } else {
+    slider.min = 40;
+    slider.max = 200;
+    slider.step = 4;
+    slider.value = fullThumbSize;
+    if (disp) disp.textContent = fullThumbSize + 'px';
+    if (label) label.textContent = 'THUMB';
+  }
 }
 
 function renderMeta() {
@@ -1430,7 +1611,7 @@ function renderStickers() {
     .filter(k => specialImages[k])
     .map(k => `
       <div class="sticker-row flex items-center gap-4" style="background: #f0f7ec; border-color: #5fa856; border-width: 1.5px;">
-        <div class="sticker-thumb" style="background: white;"><img src="${specialImages[k]}" alt="${k}"></div>
+        <div class="sticker-thumb"><img src="${specialImages[k]}" alt="${k}"></div>
         <div class="flex flex-col items-center" style="min-width: 48px;">
           <div style="font-family:'Zen Kaku Gothic New', sans-serif; font-size: 15px; font-weight: 700; color: #5fa856; letter-spacing: 0.05em;">${SPECIAL_LABELS[k]}</div>
         </div>
@@ -2219,7 +2400,10 @@ function formatDate(iso) {
   } catch (e) { return iso; }
 }
 
-render();
+// 初期化：保存済み設定を適用してからレンダリング
+setThumbBg(thumbBg);
+setThumbSize(fullThumbSize);
+render(); // render内でsyncSizeSliderも実行される
 </script>
 </body>
 </html>
