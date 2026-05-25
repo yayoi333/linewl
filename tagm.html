@@ -2057,8 +2057,9 @@ function removeMustTag(idx) {
   render();
 }
 
-function resetAll() {
-  if (!confirm('すべてのタグデータを削除します（画像は維持されます）。よろしいですか？')) return;
+async function resetAll() {
+  if (!confirm('すべてのデータ（タグ・画像）を完全に削除します。\nよろしいですか？')) return;
+  // タグデータをクリア
   localStorage.removeItem(STORAGE_KEY);
   state = {
     version: 2,
@@ -2067,6 +2068,15 @@ function resetAll() {
     tags: {},
     userMustTags: []
   };
+  // 画像をメモリからクリア
+  Object.values(stickerImages).forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
+  Object.values(specialImages).forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
+  stickerImages = {};
+  specialImages = {};
+  zipEntries = {};
+  originalZipName = '';
+  // IndexedDBをクリア
+  await idbClear();
   render();
 }
 
@@ -2533,8 +2543,13 @@ async function addPngFiles(files) {
 
 // ZIP+JSONをまとめて再パッケージ
 async function exportZipWithJson() {
-  if (Object.keys(zipEntries).length === 0) {
-    alert('まずスタンプ・絵文字ZIPをアップロードしてください。');
+  // IDBから全画像を取得（リロード後もここに残っている）
+  const idbData = await idbGetAll(); // { 's:1': Blob, 's:happy': Blob, 'p:main': Blob, ... }
+
+  // メモリ上の zipEntries も合わせて使う（今セッション中にアップロードされたもの）
+  const hasImages = Object.keys(idbData).length > 0 || Object.keys(zipEntries).length > 0;
+  if (!hasImages) {
+    alert('表示中の画像がありません。\nまずスタンプ・絵文字画像をアップロードしてください。');
     return;
   }
   if (Object.keys(state.tags).length === 0) {
@@ -2542,10 +2557,37 @@ async function exportZipWithJson() {
   }
   try {
     const zip = new JSZip();
-    // 元のファイルを全部追加
-    for (const [name, blob] of Object.entries(zipEntries)) {
-      zip.file(name, blob);
+
+    // IDBのキーからファイル名を復元して追加
+    // キー形式: 's:{key}' → スタンプ画像, 'p:{kind}' → 特殊画像
+    for (const [idbKey, blob] of Object.entries(idbData)) {
+      let fileName;
+      if (idbKey.startsWith('s:')) {
+        const k = idbKey.slice(2); // e.g. '1', 'happy'
+        const n = parseInt(k, 10);
+        if (!isNaN(n)) {
+          // 数字キー → 3桁ゼロ埋め .png
+          fileName = String(n).padStart(3, '0') + '.png';
+        } else {
+          // 文字列キー → そのまま .png（拡張子がなければ付加）
+          fileName = /\.[a-zA-Z]{2,4}$/.test(k) ? k : k + '.png';
+        }
+      } else if (idbKey.startsWith('p:')) {
+        const kind = idbKey.slice(2); // e.g. 'main', 'tab'
+        fileName = kind + '.png';
+      } else {
+        fileName = idbKey + '.png';
+      }
+      zip.file(fileName, blob);
     }
+
+    // zipEntries にあってIDBにないもの（今セッション中だけのもの）も追加
+    for (const [name, blob] of Object.entries(zipEntries)) {
+      if (!zip.files[name]) {
+        zip.file(name, blob);
+      }
+    }
+
     // tags.json を追加
     const tagsJson = buildOrderedJsonString();
     zip.file('tags.json', tagsJson);
