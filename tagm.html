@@ -2444,6 +2444,7 @@ async function handleZipUpload(event) {
     const newEntries = {};
     const newImageBlobs = {};  // IDB保存用
     const newSpecialBlobs = {}; // IDB保存用
+    const newOtherBlobs = {};   // IDB保存用（画像以外の元ファイル）
     const skipped = [];
     let foundTagsJson = null;
 
@@ -2468,7 +2469,10 @@ async function handleZipUpload(event) {
       const blob = await entry.async('blob');
       newEntries[name] = blob;
 
-      if (!/\.(png|jpe?g|gif|webp)$/i.test(name)) continue;
+      if (!/\.(png|jpe?g|gif|webp)$/i.test(name)) {
+        newOtherBlobs[name] = blob; // 画像以外の元ファイルも保持（IDBへ）
+        continue;
+      }
 
       const specialMatch = baseName.match(/^(main|tab|stab|key)\.(png|jpe?g|gif|webp)$/i);
       if (specialMatch) {
@@ -2502,6 +2506,7 @@ async function handleZipUpload(event) {
     await idbClear();
     for (const [no, blob] of Object.entries(newImageBlobs))   await idbPut('s:' + no,   blob);
     for (const [kind, blob] of Object.entries(newSpecialBlobs)) await idbPut('p:' + kind, blob);
+    for (const [name, blob] of Object.entries(newOtherBlobs))  await idbPut('f:' + name, blob);
 
     // tags.json が見つかったら自動でタグデータも反映
     let tagsImported = false;
@@ -2685,6 +2690,9 @@ async function exportZipWithJson() {
       } else if (idbKey.startsWith('p:')) {
         const kind = idbKey.slice(2); // e.g. 'main', 'tab'
         fileName = kind + '.png';
+      } else if (idbKey.startsWith('f:')) {
+        // 画像以外の元ファイル → 元のファイル名（パス）のまま
+        fileName = idbKey.slice(2);
       } else {
         fileName = idbKey + '.png';
       }
