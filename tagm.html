@@ -2397,14 +2397,23 @@ async function exportPNG() {
       img.style.height = h + 'px';
     });
 
-    // サイズ固定後に実サイズを計測（縦長・見切れ防止）
-    const width = target.scrollWidth;
-    const height = target.scrollHeight;
+    // 画像サイズ固定後、レイアウトが確定するまで待つ（描画2フレーム分）
+    await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
+
+    // 実サイズを計測。アスペクト比可変で高さが読み切れず下部が見切れるのを
+    // 防ぐため、scroll/offset/boundingRectのうち最大値を採り、さらに余白を加える。
+    const rect = target.getBoundingClientRect();
+    const width = Math.ceil(Math.max(target.scrollWidth, target.offsetWidth, rect.width));
+    const height = Math.ceil(Math.max(target.scrollHeight, target.offsetHeight, rect.height)) + 24;
     const canvas = await html2canvas(target, {
       backgroundColor: '#f4faf0',
       scale: 2,
       useCORS: true,
       imageTimeout: 0,
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
       width: width,
       height: height,
       windowWidth: width,
