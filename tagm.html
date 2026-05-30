@@ -2444,7 +2444,7 @@ async function handleZipUpload(event) {
     const newEntries = {};
     const newImageBlobs = {};  // IDB保存用
     const newSpecialBlobs = {}; // IDB保存用
-    const newOtherBlobs = {};   // IDB保存用（画像以外の元ファイル）
+    const newOtherBlobs = {};   // IDB保存用（元ファイル一式を原名のまま）
     const skipped = [];
     let foundTagsJson = null;
 
@@ -2468,11 +2468,9 @@ async function handleZipUpload(event) {
 
       const blob = await entry.async('blob');
       newEntries[name] = blob;
+      newOtherBlobs[name] = blob; // 元ファイルを原名のまま保持（書き出し時にリネームしない）
 
-      if (!/\.(png|jpe?g|gif|webp)$/i.test(name)) {
-        newOtherBlobs[name] = blob; // 画像以外の元ファイルも保持（IDBへ）
-        continue;
-      }
+      if (!/\.(png|jpe?g|gif|webp)$/i.test(name)) continue;
 
       const specialMatch = baseName.match(/^(main|tab|stab|key)\.(png|jpe?g|gif|webp)$/i);
       if (specialMatch) {
@@ -2636,6 +2634,7 @@ async function addPngFiles(files) {
       }
       specialImages[kind] = URL.createObjectURL(file);
       idbPut('p:' + kind, file); // IDBに保存（fire-and-forget）
+      idbPut('f:' + file.name, file); // 原名のまま保持
       zipEntries[file.name] = file;
       added++;
       continue;
@@ -2650,6 +2649,7 @@ async function addPngFiles(files) {
     }
     stickerImages[no] = URL.createObjectURL(file);
     idbPut('s:' + no, file); // IDBに保存（fire-and-forget）
+    idbPut('f:' + file.name, file); // 原名のまま保持
     zipEntries[file.name] = file;
     added++;
   }
@@ -2673,30 +2673,26 @@ async function exportZipWithJson() {
   try {
     const zip = new JSZip();
 
-    // IDBのキーからファイル名を復元して追加
-    // キー形式: 's:{key}' → スタンプ画像, 'p:{kind}' → 特殊画像
+    // 原名で保持した元ファイル（f:）があれば、それを最優先で使う。
+    // → 元のファイル名（02.png / 002.png 等）を一切リネームせず再現する。
+    const hasOrig = Object.keys(idbData).some(k => k.startsWith('f:'));
+
     for (const [idbKey, blob] of Object.entries(idbData)) {
-      let fileName;
-      if (idbKey.startsWith('s:')) {
-        const k = idbKey.slice(2); // e.g. '1', 'happy'
-        const n = parseInt(k, 10);
-        if (!isNaN(n)) {
-          // 数字キー → 3桁ゼロ埋め .png
-          fileName = String(n).padStart(3, '0') + '.png';
-        } else {
-          // 文字列キー → そのまま .png（拡張子がなければ付加）
-          fileName = /\.[a-zA-Z]{2,4}$/.test(k) ? k : k + '.png';
-        }
-      } else if (idbKey.startsWith('p:')) {
-        const kind = idbKey.slice(2); // e.g. 'main', 'tab'
-        fileName = kind + '.png';
-      } else if (idbKey.startsWith('f:')) {
-        // 画像以外の元ファイル → 元のファイル名（パス）のまま
+      let fileName = null;
+      if (idbKey.startsWith('f:')) {
+        // 元のファイル名（パス）のまま
         fileName = idbKey.slice(2);
-      } else {
-        fileName = idbKey + '.png';
+      } else if (!hasOrig && idbKey.startsWith('s:')) {
+        // 旧データ（f:無し）のみのフォールバック
+        const k = idbKey.slice(2);
+        const n = parseInt(k, 10);
+        fileName = !isNaN(n)
+          ? String(n).padStart(3, '0') + '.png'
+          : (/\.[a-zA-Z]{2,4}$/.test(k) ? k : k + '.png');
+      } else if (!hasOrig && idbKey.startsWith('p:')) {
+        fileName = idbKey.slice(2) + '.png';
       }
-      zip.file(fileName, blob);
+      if (fileName) zip.file(fileName, blob);
     }
 
     // zipEntries にあってIDBにないもの（今セッション中だけのもの）も追加
