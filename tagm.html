@@ -2378,15 +2378,33 @@ async function exportPNG() {
     alert('エクスポートするデータがありません'); return;
   }
   target.classList.add('exporting');
+  const frozen = [];
   try {
-    // 要素の実サイズを明示的に渡してアスペクト比のズレを防ぐ
-    // スクロールバー幅やビューポート計算誤差で縦長になる現象の対策
+    // 画像を height:auto（アスペクト比表示）にしているため、html2canvasの
+    // クローン内で画像の高さ計算がずれ、下部のセルが見切れることがある。
+    // 対策：書き出し直前に各画像のデコードを待ち、現在の描画サイズをpx固定する。
+    const imgs = Array.from(target.querySelectorAll('img'));
+    await Promise.all(imgs.map(img => {
+      if (img.complete && img.naturalWidth) return Promise.resolve();
+      if (img.decode) return img.decode().catch(() => {});
+      return new Promise(res => { img.onload = img.onerror = res; });
+    }));
+    imgs.forEach(img => {
+      const w = img.clientWidth, h = img.clientHeight;
+      if (!w || !h) return;
+      frozen.push([img, img.style.width, img.style.height]);
+      img.style.width = w + 'px';
+      img.style.height = h + 'px';
+    });
+
+    // サイズ固定後に実サイズを計測（縦長・見切れ防止）
     const width = target.scrollWidth;
     const height = target.scrollHeight;
     const canvas = await html2canvas(target, {
       backgroundColor: '#f4faf0',
       scale: 2,
       useCORS: true,
+      imageTimeout: 0,
       width: width,
       height: height,
       windowWidth: width,
@@ -2397,6 +2415,8 @@ async function exportPNG() {
     link.href = canvas.toDataURL('image/png');
     link.click();
   } finally {
+    // 固定したサイズを元に戻す
+    frozen.forEach(([img, w, h]) => { img.style.width = w; img.style.height = h; });
     target.classList.remove('exporting');
   }
 }
