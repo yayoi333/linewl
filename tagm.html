@@ -259,6 +259,19 @@
     border-color: #d4a08a;
     color: #8b4a30;
   }
+  .tag-picker-search {
+    width: 100%;
+    border: 1px solid #cce0bc;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #3a4d33;
+    outline: none;
+    margin-bottom: 8px;
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+  .tag-picker-search:focus { border-color: #5fa856; }
   .cat-section-header {
     width: 100%;
     font-size: 10px;
@@ -1969,6 +1982,11 @@ function buildPickerHTML() {
   }
 
   return `
+    <input class="tag-picker-search" id="tag-picker-search"
+           placeholder="タグを検索..." value="${escapeHtml(currentPickerQuery)}"
+           autocomplete="off"
+           oninput="filterTagPicker(this.value)"
+           onkeydown="if(event.key==='Escape'){closeTagPicker();}">
     <div class="category-tabs">${tabs}</div>
     <div class="tag-options" id="tag-options-scroll">${optionsHtml}</div>
     ${customSection}
@@ -2013,8 +2031,14 @@ function attachPickerEvents(popover) {
 function refreshPicker() {
   const popover = document.getElementById('active-tag-picker');
   if (!popover) return;
+  const searchWasFocused = document.activeElement?.id === 'tag-picker-search';
   popover.innerHTML = buildPickerHTML();
   attachPickerEvents(popover);
+  // 検索欄にフォーカスがあった場合は再フォーカス（カーソル位置を末尾に）
+  if (searchWasFocused) {
+    const s = document.getElementById('tag-picker-search');
+    if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  }
 }
 
 function filterTagPicker(value) {
