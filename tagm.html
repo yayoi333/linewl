@@ -259,6 +259,18 @@
     border-color: #d4a08a;
     color: #8b4a30;
   }
+  .cat-section-header {
+    width: 100%;
+    font-size: 10px;
+    font-weight: 700;
+    color: #5fa856;
+    padding: 5px 2px 3px;
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #dbecd0;
+    flex-shrink: 0;
+  }
+  .cat-section-header:first-child { margin-top: 0; }
 
   dialog::backdrop {
     background: rgba(30, 60, 30, 0.4);
@@ -1911,11 +1923,11 @@ function openTagPicker(inputEl, type, no) {
 }
 
 function buildPickerHTML() {
-  const cats = ['all', ...Object.keys(TAG_MASTER)];
-  const tabs = cats.map(c => {
-    const label = c === 'all' ? 'すべて' : c;
-    const cls = c === currentPickerCategory ? 'active' : '';
-    return `<span class="category-tab ${cls}" data-cat="${escapeHtml(c)}">${escapeHtml(label)}</span>`;
+  const catKeys = Object.keys(TAG_MASTER);
+  // カテゴリタブ：カッコ内の数字を除いたラベルで表示
+  const tabs = ['all', ...catKeys].map(c => {
+    const label = c === 'all' ? 'すべて' : c.replace(/\s*\(\d+\)$/, '').trim();
+    return `<span class="category-tab" data-cat="${escapeHtml(c)}">${escapeHtml(label)}</span>`;
   }).join('');
 
   const existing = new Set(
@@ -1924,22 +1936,27 @@ function buildPickerHTML() {
       : (state.tags[currentPickerContext.no] || [])
   );
 
-  let candidates = [];
-  if (currentPickerCategory === 'all') {
-    candidates = Array.from(ALL_MASTER_TAGS);
-  } else {
-    candidates = TAG_MASTER[currentPickerCategory] || [];
+  // 全タグをカテゴリ別セクションで表示（上限なし）
+  let optionsHtml = '';
+  let hasAny = false;
+  catKeys.forEach((cat, idx) => {
+    let tags = TAG_MASTER[cat];
+    if (currentPickerQuery) {
+      const q = currentPickerQuery.toLowerCase();
+      tags = tags.filter(t => t.toLowerCase().includes(q));
+    }
+    if (tags.length === 0) return;
+    hasAny = true;
+    const label = cat.replace(/\s*\(\d+\)$/, '').trim();
+    optionsHtml += `<div class="cat-section-header" id="cat-sec-${idx}">${escapeHtml(label)}</div>`;
+    optionsHtml += tags.map(t => {
+      const cls = existing.has(t) ? 'selected' : '';
+      return `<button class="tag-option ${cls}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`;
+    }).join('');
+  });
+  if (!hasAny) {
+    optionsHtml = '<span style="font-size:11px; color:#8ba07d; padding:6px;">該当なし</span>';
   }
-
-  if (currentPickerQuery) {
-    const q = currentPickerQuery.toLowerCase();
-    candidates = candidates.filter(t => t.toLowerCase().includes(q));
-  }
-
-  const options = candidates.slice(0, 200).map(t => {
-    const cls = existing.has(t) ? 'selected' : '';
-    return `<button class="tag-option ${cls}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`;
-  }).join('');
 
   let customSection = '';
   if (currentPickerQuery && !ALL_MASTER_TAGS.has(currentPickerQuery)) {
@@ -1953,19 +1970,37 @@ function buildPickerHTML() {
 
   return `
     <div class="category-tabs">${tabs}</div>
-    <div class="tag-options">${options || '<span style="font-size:11px; color:#8ba07d; padding:6px;">該当なし</span>'}</div>
+    <div class="tag-options" id="tag-options-scroll">${optionsHtml}</div>
     ${customSection}
   `;
 }
 
 function attachPickerEvents(popover) {
+  const catKeys = Object.keys(TAG_MASTER);
+
   popover.querySelectorAll('.category-tab').forEach(tab => {
     tab.addEventListener('pointerdown', e => {
       e.preventDefault();
-      currentPickerCategory = tab.dataset.cat;
-      refreshPicker();
+      const cat = tab.dataset.cat;
+      const scrollEl = document.getElementById('tag-options-scroll');
+      if (!scrollEl) return;
+
+      if (cat === 'all') {
+        // 「すべて」→ 先頭へ
+        scrollEl.scrollTop = 0;
+      } else {
+        // カテゴリ → 該当セクションへスクロール
+        const idx = catKeys.indexOf(cat);
+        const section = document.getElementById('cat-sec-' + idx);
+        if (section) {
+          const containerTop = scrollEl.getBoundingClientRect().top;
+          const sectionTop = section.getBoundingClientRect().top;
+          scrollEl.scrollTop += sectionTop - containerTop;
+        }
+      }
     });
   });
+
   popover.querySelectorAll('.tag-option').forEach(opt => {
     opt.addEventListener('pointerdown', e => {
       e.preventDefault();
