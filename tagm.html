@@ -2232,6 +2232,15 @@ function performImport() {
       alert(`⚠ LINE公式マスタにないタグが ${result.invalidCount} 種類ありました：\n\n${list}${more}\n\n該当タグは画面上で警告色（茶色）で表示されています。LINE申請前に置き換えを検討してください。`);
     }, 200);
   }
+
+  if (result.dupCount > 0) {
+    const lines = result.duplicates.slice(0, 20)
+      .map(d => `${d.key}：${d.tags.join('、')}`).join('\n');
+    const more = result.dupCount > 20 ? `\n…他${result.dupCount - 20}件` : '';
+    setTimeout(() => {
+      alert(`⚠ 同じスタンプ内でタグが重複しています（${result.dupCount}件）：\n\n${lines}${more}\n\nLINE申請前に重複の解消を検討してください。`);
+    }, 400);
+  }
 }
 
 // オブジェクトキー順を保証するJSON文字列ビルダー
@@ -2517,6 +2526,9 @@ async function handleZipUpload(event) {
         if (result.invalidCount > 0) {
           tagsImportInfo += `\n（マスタ外タグ ${result.invalidCount} 種類あり）`;
         }
+        if (result.dupCount > 0) {
+          tagsImportInfo += `\n（タグ重複 ${result.dupCount} 件あり）`;
+        }
       } else {
         tagsImportInfo = `\nZIP内の tags.json は形式不正で読み込めませんでした。`;
       }
@@ -2594,6 +2606,20 @@ function applyImportedJson(parsed, fallbackName) {
     }
   }
 
+  // スタンプ内タグ重複チェック（1つのスタンプに同じタグが複数あるか）
+  const duplicates = [];
+  for (const k of keys) {
+    const seen = new Set();
+    const dupForKey = new Set();
+    for (const t of tagsObj[k]) {
+      if (seen.has(t)) dupForKey.add(t);
+      else seen.add(t);
+    }
+    if (dupForKey.size > 0) {
+      duplicates.push({ key: k, tags: Array.from(dupForKey) });
+    }
+  }
+
   // キー正規化（ゼロ埋め桁数統一）
   const digits = getDisplayDigits(keys.map(normKey));
   const normalized = {};
@@ -2617,7 +2643,7 @@ function applyImportedJson(parsed, fallbackName) {
   state.importedAt = new Date().toISOString();
   saveState();
 
-  return { success: true, keyCount: keys.length, invalidCount: invalidTags.size, invalidTags: Array.from(invalidTags) };
+  return { success: true, keyCount: keys.length, invalidCount: invalidTags.size, invalidTags: Array.from(invalidTags), dupCount: duplicates.length, duplicates: duplicates };
 }
 
 // 単体画像ファイル群を stickerImages に追加（ファイル名から番号抽出）
