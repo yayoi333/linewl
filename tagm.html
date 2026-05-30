@@ -1935,6 +1935,8 @@ function openTagPicker(inputEl, type, no) {
   attachPickerEvents(popover);
 }
 
+// ピッカー全体の枠（検索欄・カテゴリタブ・結果コンテナ）を構築。
+// 検索欄とタブはクエリ変更で作り直さない（IME変換が途切れないようにするため）。
 function buildPickerHTML() {
   const catKeys = Object.keys(TAG_MASTER);
   // カテゴリタブ：カッコ内の数字を除いたラベルで表示
@@ -1943,21 +1945,34 @@ function buildPickerHTML() {
     return `<span class="category-tab" data-cat="${escapeHtml(c)}">${escapeHtml(label)}</span>`;
   }).join('');
 
+  return `
+    <input class="tag-picker-search" id="tag-picker-search"
+           placeholder="タグを検索..." value="${escapeHtml(currentPickerQuery)}"
+           autocomplete="off"
+           oninput="filterTagPicker(this.value)"
+           onkeydown="if(event.key==='Escape'){closeTagPicker();}">
+    <div class="category-tabs">${tabs}</div>
+    <div class="tag-options" id="tag-options-scroll">${buildPickerOptionsHTML()}</div>
+  `;
+}
+
+// 検索クエリに応じたタグ一覧（カテゴリ別セクション＋カスタム追加）を構築。
+// クエリ変更時はこの部分だけを差し替える。
+function buildPickerOptionsHTML() {
+  const catKeys = Object.keys(TAG_MASTER);
   const existing = new Set(
     currentPickerContext.type === 'must'
       ? state.userMustTags
       : (state.tags[currentPickerContext.no] || [])
   );
+  const q = currentPickerQuery ? currentPickerQuery.toLowerCase() : '';
 
   // 全タグをカテゴリ別セクションで表示（上限なし）
   let optionsHtml = '';
   let hasAny = false;
   catKeys.forEach((cat, idx) => {
     let tags = TAG_MASTER[cat];
-    if (currentPickerQuery) {
-      const q = currentPickerQuery.toLowerCase();
-      tags = tags.filter(t => t.toLowerCase().includes(q));
-    }
+    if (q) tags = tags.filter(t => t.toLowerCase().includes(q));
     if (tags.length === 0) return;
     hasAny = true;
     const label = cat.replace(/\s*\(\d+\)$/, '').trim();
@@ -1974,23 +1989,14 @@ function buildPickerHTML() {
   let customSection = '';
   if (currentPickerQuery && !ALL_MASTER_TAGS.has(currentPickerQuery)) {
     customSection = `
-      <div style="border-top: 1px dashed #cce0bc; padding-top: 6px; margin-top: 6px;">
+      <div style="border-top: 1px dashed #cce0bc; padding-top: 6px; margin-top: 6px; width:100%;">
         <div style="font-size: 10px; color: #8ba07d; margin-bottom: 4px;">マスタ外（カスタム追加）</div>
         <button class="tag-option custom" data-tag="${escapeHtml(currentPickerQuery)}" data-custom="1">+ ${escapeHtml(currentPickerQuery)}</button>
       </div>
     `;
   }
 
-  return `
-    <input class="tag-picker-search" id="tag-picker-search"
-           placeholder="タグを検索..." value="${escapeHtml(currentPickerQuery)}"
-           autocomplete="off"
-           oninput="filterTagPicker(this.value)"
-           onkeydown="if(event.key==='Escape'){closeTagPicker();}">
-    <div class="category-tabs">${tabs}</div>
-    <div class="tag-options" id="tag-options-scroll">${optionsHtml}</div>
-    ${customSection}
-  `;
+  return optionsHtml + customSection;
 }
 
 function attachPickerEvents(popover) {
@@ -2019,7 +2025,12 @@ function attachPickerEvents(popover) {
     });
   });
 
-  popover.querySelectorAll('.tag-option').forEach(opt => {
+  attachOptionEvents(popover);
+}
+
+// タグオプションのクリックイベントだけを（再）アタッチする
+function attachOptionEvents(root) {
+  root.querySelectorAll('.tag-option').forEach(opt => {
     opt.addEventListener('pointerdown', e => {
       e.preventDefault();
       const tag = opt.dataset.tag;
@@ -2041,9 +2052,14 @@ function refreshPicker() {
   }
 }
 
+// 検索クエリ変更時：検索欄・タブは触らず、一覧部分だけ差し替える。
+// これにより日本語入力（IME変換中）が途切れない。
 function filterTagPicker(value) {
   currentPickerQuery = value.trim();
-  refreshPicker();
+  const scrollEl = document.getElementById('tag-options-scroll');
+  if (!scrollEl) return;
+  scrollEl.innerHTML = buildPickerOptionsHTML();
+  attachOptionEvents(scrollEl);
 }
 
 function selectTagFromPicker(tag) {
