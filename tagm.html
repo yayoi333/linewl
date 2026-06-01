@@ -481,6 +481,26 @@
   }
   .btn-upload:hover { background: #ddeeff; border-color: #60a0d0; }
 
+  /* タグ付けGPTボタン */
+  .btn-gpt {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #10a37f;
+    color: #ffffff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #0d8a6c;
+    font-size: 13px;
+    transition: all 0.15s;
+    font-family: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn-gpt:hover { background: #0d8a6c; border-color: #0a6f56; }
+
   /* 書き出しボタン（オレンジ系） */
   .btn-export {
     background: #fff8f0;
@@ -607,6 +627,8 @@
 
       <!-- グループ2: 読み込み（青系） -->
       <div class="flex gap-1.5 items-center flex-wrap justify-end">
+        <a href="https://chatgpt.com/g/g-6a0365ad2f4c8191a6a0151140c7e211-linesutanhuhui-wen-zi-takuzi-ketiyan"
+           target="_blank" rel="noopener noreferrer" class="btn-gpt">タグ付けGPT</a>
         <span class="btn-group-label blue">読み込み</span>
         <label class="btn-upload cursor-pointer">
           ZIP アップロード
