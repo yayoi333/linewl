@@ -3,350 +3,1059 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LINEスタンプ・絵文字 制作ツール一覧</title>
-<meta name="description" content="LINEスタンプ・絵文字制作、タグ管理、申請補助に使うツール一覧。">
+<title>スタンプわーくラボ｜LINEスタンプ・絵文字 制作ツール一覧</title>
+<meta name="description" content="購入者専用。LINEスタンプ・絵文字制作、タグ管理、申請補助に使うツールをまとめたスタンプわーくラボ。">
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
 <meta name="googlebot" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
 <meta name="bingbot" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
+<meta name="slurp" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
+<meta name="duckduckbot" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
+<meta name="baiduspider" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
+<meta name="yandex" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
 <meta name="AI" content="noai,noimageai">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/favicon.png">
 <style>
 :root{
   color-scheme:light;
-  --bg:#eafff4;
+  --line:#06c755;
+  --line-dark:#00a143;
+  --line-deep:#062e18;
+  --lime:#c9ff68;
+  --mint:#e9fff2;
+  --mint-2:#f6fff9;
   --paper:#ffffff;
-  --ink:#34383a;
-  --sub:#39413b;
-  --muted:#5f7569;
-  --green:#07b956;
-  --green-deep:#00883d;
-  --line:#d9f0e3;
-  --soft:#f6fff9;
-  --shadow:0 18px 44px rgba(34,74,52,.08);
+  --paper-2:#f8fbf8;
+  --ink:#102017;
+  --sub:#526458;
+  --muted:#7a8b80;
+  --border:rgba(16,32,23,.1);
+  --border-strong:rgba(6,199,85,.25);
+  --shadow:0 24px 70px rgba(2,46,22,.12);
+  --shadow-soft:0 14px 36px rgba(2,46,22,.08);
+  --radius:28px;
 }
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
 body{
   margin:0;
-  background:var(--bg);
+  min-height:100vh;
   color:var(--ink);
-  font-family:"Yu Gothic","Hiragino Kaku Gothic ProN",Meiryo,system-ui,sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
   line-height:1.75;
+  letter-spacing:.015em;
+  background:
+    radial-gradient(circle at 8% -8%, rgba(6,199,85,.22), transparent 32rem),
+    radial-gradient(circle at 88% 4%, rgba(201,255,104,.2), transparent 28rem),
+    linear-gradient(180deg,#f2fff7 0%,#ffffff 44%,#f7faf7 100%);
+}
+body:before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.42;
+  background-image:
+    linear-gradient(rgba(6,199,85,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6,199,85,.055) 1px, transparent 1px);
+  background-size:38px 38px;
+  mask-image:linear-gradient(180deg,#000 0%,transparent 72%);
 }
 a{color:inherit;text-decoration:none}
+button,a{touch-action:manipulation}
+::selection{background:rgba(6,199,85,.2)}
 .page{
-  width:min(100% - 36px,920px);
+  width:min(100% - 40px,1160px);
   margin:0 auto;
-  padding:0 0 70px;
-}
-.hero-art{
-  height:230px;
-  margin:0 auto 0;
-  overflow:hidden;
-  position:relative;
-  background:
-    radial-gradient(circle at 50% 34%, rgba(255,255,255,.9) 0 8%, transparent 18%),
-    linear-gradient(90deg,rgba(234,255,244,.75),rgba(255,255,255,.1) 18%,rgba(255,255,255,.1) 82%,rgba(234,255,244,.75)),
-    linear-gradient(135deg,#f8fffb,#eaf9f1);
-}
-.hero-art:before,
-.hero-art:after{
-  content:"";
-  position:absolute;
-  border-radius:8px;
-  background:rgba(255,255,255,.82);
-  border:1px solid rgba(207,236,221,.75);
-  box-shadow:0 14px 34px rgba(28,92,55,.08);
-  transform:rotate(-8deg);
-}
-.hero-art:before{width:230px;height:78px;left:90px;top:24px}
-.hero-art:after{width:176px;height:66px;right:92px;top:38px;transform:rotate(10deg)}
-.mock-card{
-  position:absolute;
-  left:50%;
-  top:26px;
-  width:170px;
-  height:170px;
-  transform:translateX(-50%) rotate(9deg);
-  border-radius:10px;
-  border:1px solid #d8eadf;
-  background:
-    linear-gradient(45deg,#f7f7f7 25%,transparent 25% 75%,#f7f7f7 75%),
-    linear-gradient(45deg,#f7f7f7 25%,transparent 25% 75%,#f7f7f7 75%);
-  background-color:#fff;
-  background-position:0 0,12px 12px;
-  background-size:24px 24px;
-  display:grid;
-  place-items:center;
-  box-shadow:0 16px 34px rgba(29,83,51,.12);
-}
-.bear{
-  width:88px;
-  height:96px;
-  border-radius:44px 44px 28px 28px;
-  background:#7a4d3b;
+  padding:22px 0 68px;
   position:relative;
 }
-.bear:before,.bear:after{content:"";position:absolute;top:-11px;width:28px;height:28px;border-radius:50%;background:#6b4030}
-.bear:before{left:8px}.bear:after{right:8px}
-.bear i{position:absolute;left:32px;top:34px;width:24px;height:28px;border-radius:50%;background:#f8e8d8}
-.bear i:before,.bear i:after{content:"";position:absolute;background:#24150f;border-radius:50%}
-.bear i:before{width:4px;height:4px;left:6px;top:9px;box-shadow:8px 0 #24150f}
-.bear i:after{width:8px;height:5px;left:8px;top:16px}
-.float{
-  position:absolute;
-  display:grid;
-  place-items:center;
-  width:80px;
-  height:58px;
-  border-radius:8px;
-  background:rgba(255,255,255,.86);
-  border:1px solid rgba(208,238,224,.75);
-  color:var(--green);
+.topbar{
+  position:sticky;
+  top:14px;
+  z-index:20;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:44px;
+  padding:10px;
+  border:1px solid rgba(255,255,255,.78);
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  box-shadow:0 18px 50px rgba(1,30,13,.08);
+  backdrop-filter:blur(18px);
+}
+.brand{
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  padding-left:4px;
+  font-size:14px;
   font-weight:900;
-  box-shadow:0 12px 28px rgba(42,100,67,.08);
+  letter-spacing:.03em;
 }
-.f1{left:150px;bottom:42px}.f2{left:270px;bottom:34px}.f3{right:168px;bottom:40px}.f4{right:42px;bottom:62px}
-.intro{padding:0 12px}
+.brand-mark{
+  width:42px;
+  height:42px;
+  border-radius:15px;
+  display:grid;
+  place-items:center;
+  color:#fff;
+  background:
+    radial-gradient(circle at 28% 22%,rgba(255,255,255,.45),transparent 26%),
+    linear-gradient(135deg,var(--line),#00b84c);
+  box-shadow:0 14px 28px rgba(6,199,85,.3);
+}
+.brand-mark svg{width:24px;height:24px}
+.brand-text{
+  display:flex;
+  flex-direction:column;
+  line-height:1.18;
+}
+.brand-text small{
+  color:var(--muted);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.nav{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.nav a{
+  min-height:38px;
+  display:inline-flex;
+  align-items:center;
+  padding:0 14px;
+  border-radius:999px;
+  color:#435248;
+  font-size:12px;
+  font-weight:900;
+  transition:background .2s ease,color .2s ease,transform .2s ease;
+}
+.nav a:hover{
+  color:var(--line-dark);
+  background:rgba(6,199,85,.1);
+  transform:translateY(-1px);
+}
+.hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.03fr) minmax(360px,.97fr);
+  gap:42px;
+  align-items:center;
+  min-height:600px;
+  padding:24px 0 40px;
+}
+.hero-copy{
+  position:relative;
+  z-index:2;
+}
 .eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
   margin:0 0 18px;
-  color:var(--green-deep);
-  font-size:13px;
+  padding:8px 13px;
+  border:1px solid rgba(6,199,85,.18);
+  border-radius:999px;
+  color:var(--line-dark);
+  background:rgba(255,255,255,.74);
+  box-shadow:0 12px 28px rgba(6,199,85,.08);
+  font-size:12px;
   font-weight:900;
-  letter-spacing:.05em;
+  letter-spacing:.08em;
 }
+.eyebrow:before{
+  content:"";
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  background:var(--line);
+  box-shadow:0 0 0 6px rgba(6,199,85,.12);
+}
+h1,h2,h3,p{margin-top:0}
 h1{
-  margin:0;
-  font-size:clamp(34px,4.5vw,48px);
-  line-height:1.42;
-  letter-spacing:.02em;
-  font-weight:900;
+  margin-bottom:22px;
+  color:#0d2416;
+  font-size:clamp(44px,7.2vw,86px);
+  line-height:1.04;
+  letter-spacing:-.06em;
+  font-weight:950;
+}
+.hero-accent{
+  display:inline-block;
+  color:var(--line-dark);
+  text-shadow:0 12px 32px rgba(6,199,85,.2);
 }
 .lead{
-  margin:24px 0 0;
-  color:#303a35;
-  font-size:15px;
-  font-weight:700;
+  max-width:620px;
+  margin:0;
+  color:#34483b;
+  font-size:17px;
+  font-weight:800;
+  line-height:2;
 }
-.badges{
-  display:grid;
-  grid-template-columns:repeat(3,128px);
-  justify-content:end;
-  gap:44px;
-  margin:0 72px 58px 0;
+.hero-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:34px;
 }
-.badge{
-  width:112px;
-  height:112px;
+.button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  min-height:52px;
+  padding:0 20px;
+  border-radius:999px;
+  border:1px solid transparent;
+  font-size:14px;
+  font-weight:950;
+  transition:transform .2s ease,box-shadow .2s ease,background .2s ease;
+}
+.button svg{width:18px;height:18px}
+.button:hover{transform:translateY(-2px)}
+.button.primary{
+  color:#fff;
+  background:linear-gradient(135deg,var(--line),#00a443);
+  box-shadow:0 18px 38px rgba(6,199,85,.28);
+}
+.button.primary:hover{box-shadow:0 24px 52px rgba(6,199,85,.34)}
+.button.secondary{
+  color:#173422;
+  background:#fff;
+  border-color:rgba(16,32,23,.1);
+  box-shadow:0 16px 34px rgba(1,30,13,.08);
+}
+.member-note{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  max-width:610px;
+  margin-top:24px;
+  color:#607166;
+  font-size:12px;
+  font-weight:800;
+}
+.member-note svg{
+  width:17px;
+  height:17px;
+  flex:0 0 auto;
+  margin-top:4px;
+  color:var(--line-dark);
+}
+.hero-visual{
+  position:relative;
+  min-height:520px;
+}
+.hero-visual:before{
+  content:"";
+  position:absolute;
+  inset:40px 14px 46px;
+  border-radius:44% 56% 50% 50% / 47% 44% 56% 53%;
+  background:
+    radial-gradient(circle at 26% 22%,rgba(255,255,255,.9),transparent 12rem),
+    radial-gradient(circle at 78% 18%,rgba(164,219,255,.46),transparent 14rem),
+    linear-gradient(135deg,rgba(6,199,85,.2),rgba(201,255,104,.28));
+  filter:blur(.3px);
+  transform:rotate(-7deg);
+}
+.phone-card{
+  position:relative;
+  width:min(100%,440px);
+  margin:24px auto 0;
+  padding:16px;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:42px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.88),rgba(255,255,255,.72)),
+    radial-gradient(circle at 18% 12%,rgba(6,199,85,.28),transparent 14rem);
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(18px);
+}
+.phone-screen{
+  position:relative;
+  overflow:hidden;
+  border:1px solid rgba(16,32,23,.08);
+  border-radius:32px;
+  background:
+    radial-gradient(ellipse at 14% 18%,rgba(255,255,255,.95) 0 8%,transparent 8.5%),
+    radial-gradient(ellipse at 27% 16%,rgba(255,255,255,.88) 0 10%,transparent 10.5%),
+    radial-gradient(ellipse at 78% 24%,rgba(255,255,255,.9) 0 8%,transparent 8.5%),
+    linear-gradient(180deg,#8bd8ff 0%,#bdeaff 38%,#f4fbff 68%,#f7fff9 100%);
+  min-height:500px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.45);
+}
+.screen-head{
+  position:relative;
+  z-index:1;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+  padding:20px 20px 15px;
+  color:#163722;
+}
+.screen-head span{
+  color:#007cbe;
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.screen-head b{
+  display:block;
+  color:#102017;
+  font-size:20px;
+  letter-spacing:-.03em;
+}
+.dots{
+  display:flex;
+  gap:6px;
+}
+.dots i{
+  width:8px;
+  height:8px;
   border-radius:50%;
-  background:rgba(255,255,255,.86);
+  background:rgba(16,32,23,.22);
+}
+.chat-area{
+  position:relative;
+  z-index:1;
+  padding:12px 18px 22px;
+}
+.chat-bubble{
+  width:max-content;
+  max-width:86%;
+  margin-bottom:12px;
+  padding:12px 14px;
+  border-radius:20px;
+  color:#1a2d21;
+  background:rgba(255,255,255,.9);
+  border:1px solid rgba(16,32,23,.08);
+  box-shadow:0 12px 24px rgba(0,89,140,.08);
+  font-size:13px;
+  font-weight:850;
+}
+.chat-bubble.user{
+  margin-left:auto;
+  color:#062e18;
+  background:linear-gradient(135deg,#b8ffcd,var(--line));
+  border-color:rgba(255,255,255,.55);
+}
+.workspace-card{
+  position:relative;
+  z-index:1;
+  margin:18px;
+  padding:18px;
+  border-radius:28px;
+  background:rgba(255,255,255,.92);
+  box-shadow:0 22px 50px rgba(0,89,140,.14);
+}
+.workspace-card small{
+  display:block;
+  margin-bottom:4px;
+  color:var(--line-dark);
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:.12em;
+}
+.workspace-card strong{
+  display:block;
+  color:#12251a;
+  font-size:22px;
+  line-height:1.25;
+  letter-spacing:-.04em;
+}
+.mini-grid{
+  display:grid;
+  gap:10px;
+  margin-top:18px;
+}
+.mini-item{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:12px;
+  border:1px solid rgba(6,199,85,.13);
+  border-radius:18px;
+  background:linear-gradient(180deg,#f9fffb,#f2fff7);
+}
+.mini-icon{
+  width:34px;
+  height:34px;
+  border-radius:13px;
   display:grid;
   place-items:center;
-  text-align:center;
-  box-shadow:0 14px 30px rgba(18,87,49,.06);
+  color:#fff;
+  background:var(--line);
+  box-shadow:0 10px 20px rgba(6,199,85,.22);
 }
-.badge svg{width:36px;height:36px;color:var(--green);margin-bottom:8px}
-.badge b{display:block;font-size:13px;line-height:1.25}
-.section{margin-top:42px}
-.section h2{
-  margin:0 0 8px;
-  font-size:24px;
-  letter-spacing:.02em;
+.mini-icon svg{width:18px;height:18px}
+.mini-item b{
+  display:block;
+  font-size:13px;
+  line-height:1.3;
 }
-.section p.note{
-  margin:0 0 24px;
-  color:#27322d;
+.mini-item span{
+  display:block;
+  color:#718176;
+  font-size:11px;
+  font-weight:800;
+}
+.float-label{
+  position:absolute;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:48px;
+  padding:10px 14px;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:999px;
+  background:rgba(255,255,255,.82);
+  box-shadow:0 18px 38px rgba(0,50,20,.13);
+  backdrop-filter:blur(16px);
+  color:#163722;
+  font-size:12px;
+  font-weight:950;
+}
+.float-label:before{
+  content:"";
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:var(--line);
+  box-shadow:0 0 0 6px rgba(6,199,85,.12);
+}
+.float-label.one{left:0;top:78px}
+.float-label.two{right:4px;bottom:76px}
+.quick-launch{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+  margin:10px 0 72px;
+}
+.launch-item{
+  position:relative;
+  overflow:hidden;
+  min-height:128px;
+  padding:20px;
+  border:1px solid rgba(16,32,23,.08);
+  border-radius:26px;
+  background:rgba(255,255,255,.78);
+  box-shadow:var(--shadow-soft);
+  backdrop-filter:blur(14px);
+}
+.launch-item:after{
+  content:"";
+  position:absolute;
+  right:-22px;
+  top:-32px;
+  width:96px;
+  height:96px;
+  border-radius:50%;
+  background:rgba(6,199,85,.1);
+}
+.launch-item b{
+  display:block;
+  margin-bottom:8px;
+  color:var(--line-dark);
+  font-size:12px;
+  letter-spacing:.1em;
+}
+.launch-item span{
+  position:relative;
+  z-index:1;
+  display:block;
+  max-width:260px;
+  color:#26382c;
   font-size:14px;
-  font-weight:700;
+  font-weight:850;
+}
+.section{
+  margin-top:34px;
+  padding:38px;
+  border:1px solid rgba(16,32,23,.08);
+  border-radius:36px;
+  background:rgba(255,255,255,.76);
+  box-shadow:var(--shadow-soft);
+  backdrop-filter:blur(18px);
+}
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  gap:24px;
+  margin-bottom:22px;
+}
+.kicker{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:10px;
+  color:var(--line-dark);
+  font-size:12px;
+  font-weight:950;
+  letter-spacing:.1em;
+}
+.kicker:before{
+  content:"";
+  width:20px;
+  height:3px;
+  border-radius:999px;
+  background:var(--line);
+}
+h2{
+  margin:0;
+  color:#102017;
+  font-size:clamp(28px,3.6vw,44px);
+  line-height:1.15;
+  letter-spacing:-.05em;
+  font-weight:950;
+}
+.note{
+  max-width:440px;
+  margin:0;
+  color:var(--sub);
+  font-size:14px;
+  font-weight:800;
 }
 .grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  gap:22px;
+  gap:16px;
 }
 .card{
-  min-height:258px;
-  padding:28px 24px;
-  background:rgba(255,255,255,.92);
-  border:1px solid var(--line);
-  border-radius:8px;
+  position:relative;
+  overflow:hidden;
   display:flex;
   flex-direction:column;
-  align-items:flex-start;
-  box-shadow:0 14px 34px rgba(46,102,72,.05);
+  min-height:250px;
+  padding:22px;
+  border:1px solid rgba(16,32,23,.08);
+  border-radius:30px;
+  background:
+    radial-gradient(circle at 84% 10%,var(--tone),transparent 7.5rem),
+    linear-gradient(180deg,#ffffff,#fbfdfb);
+  box-shadow:0 14px 32px rgba(1,30,13,.06);
+  transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
 }
-.card.tall{min-height:270px}
-.icon{
-  width:72px;
-  height:72px;
-  border-radius:8px;
+.card:hover{
+  transform:translateY(-6px);
+  border-color:color-mix(in srgb,var(--accent) 34%,transparent);
+  box-shadow:0 28px 58px rgba(1,30,13,.12);
+}
+.card:before{
+  content:"";
+  position:absolute;
+  left:22px;
+  right:22px;
+  top:0;
+  height:4px;
+  border-radius:0 0 999px 999px;
+  background:var(--accent);
+}
+.card .icon{
+  width:54px;
+  height:54px;
+  margin-bottom:30px;
+  border-radius:20px;
   display:grid;
   place-items:center;
-  background:var(--soft);
-  border:1px solid #eef8f1;
-  margin-bottom:24px;
+  color:var(--accent);
+  background:var(--tone);
 }
-.icon svg{width:44px;height:44px}
-.blue{color:#276cf1}.pink{color:#ff4da3}.orange{color:#ff8300}.green{color:var(--green)}.violet{color:#8b5cf6}.mint{color:#b7e8cb}
+.card .icon svg{width:30px;height:30px}
 .label{
-  color:var(--green-deep);
+  margin-bottom:8px;
+  color:var(--accent);
   font-size:11px;
-  font-weight:900;
-  letter-spacing:.06em;
+  font-weight:950;
+  letter-spacing:.12em;
   text-transform:uppercase;
 }
 .card h3{
-  margin:11px 0 12px;
-  font-size:21px;
-  line-height:1.55;
-  font-weight:900;
+  margin:0 0 10px;
+  color:#102017;
+  font-size:22px;
+  line-height:1.3;
+  letter-spacing:-.04em;
+  font-weight:950;
 }
 .card p{
   margin:0;
-  color:#26332d;
-  font-size:14px;
-  font-weight:700;
+  color:var(--sub);
+  font-size:13px;
+  font-weight:800;
 }
-.card:hover{transform:translateY(-2px);box-shadow:0 20px 44px rgba(42,92,62,.09)}
-.official{
-  display:grid;
-  grid-template-columns:80px 1fr;
-  gap:18px;
-  align-items:center;
-  max-width:390px;
-  min-height:132px;
-  padding:24px;
-  background:rgba(255,255,255,.9);
-  border:1px solid var(--line);
-  border-radius:8px;
-  box-shadow:0 14px 34px rgba(46,102,72,.05);
-}
-.official .icon{margin:0;background:#f8faf9;color:#26322d}
-.pill{
+.card .open{
   display:inline-flex;
   align-items:center;
-  height:22px;
-  padding:0 9px;
-  border-radius:99px;
-  background:#eef2ef;
-  color:#5d6560;
-  font-size:10px;
-  font-weight:900;
-  letter-spacing:.08em;
+  gap:6px;
+  margin-top:auto;
+  padding-top:22px;
+  color:#15291c;
+  font-size:12px;
+  font-weight:950;
 }
-.official h3{margin:8px 0 6px;font-size:18px}
-.official p{margin:0;color:#48544e;font-size:13px;font-weight:700}
-@media(max-width:760px){
-  .page{width:min(100% - 24px,560px)}
-  .hero-art{height:190px}
-  .intro{padding:0 2px}
-  .badges{grid-template-columns:repeat(3,1fr);gap:10px;margin:28px 0 48px}
-  .badge{width:100%;height:auto;aspect-ratio:1}
-  .grid{grid-template-columns:1fr}
-  .card{min-height:0}
-  .official{max-width:none}
+.card .open svg{
+  width:15px;
+  height:15px;
+}
+.flow{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(280px,.52fr);
+  gap:16px;
+  background:
+    radial-gradient(circle at 90% 12%,rgba(6,199,85,.12),transparent 17rem),
+    rgba(255,255,255,.78);
+}
+.steps{
+  display:grid;
+  gap:12px;
+}
+.step{
+  display:grid;
+  grid-template-columns:48px 1fr;
+  gap:14px;
+  padding:18px;
+  border:1px solid rgba(16,32,23,.08);
+  border-radius:24px;
+  background:#fff;
+}
+.step-num{
+  width:48px;
+  height:48px;
+  border-radius:17px;
+  display:grid;
+  place-items:center;
+  color:#fff;
+  background:linear-gradient(135deg,var(--line),#00a443);
+  box-shadow:0 14px 26px rgba(6,199,85,.24);
+  font-weight:950;
+}
+.step h3{
+  margin:0 0 4px;
+  font-size:17px;
+  letter-spacing:-.02em;
+}
+.step p{
+  margin:0;
+  color:var(--sub);
+  font-size:13px;
+  font-weight:800;
+}
+.official{
+  position:relative;
+  overflow:hidden;
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:22px;
+  padding:24px;
+  border-radius:30px;
+  color:#fff;
+  background:
+    radial-gradient(circle at 18% 12%,rgba(255,255,255,.22),transparent 9rem),
+    linear-gradient(145deg,#061b0d,#063f1d 52%,#06a94b);
+  box-shadow:0 22px 50px rgba(2,46,22,.18);
+}
+.official:after{
+  content:"";
+  position:absolute;
+  right:-42px;
+  bottom:-42px;
+  width:150px;
+  height:150px;
+  border-radius:50%;
+  background:rgba(255,255,255,.08);
+}
+.official .pill{
+  width:max-content;
+  padding:7px 10px;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.official h3{
+  position:relative;
+  z-index:1;
+  margin:0 0 10px;
+  font-size:25px;
+  line-height:1.25;
+  letter-spacing:-.04em;
+}
+.official p{
+  position:relative;
+  z-index:1;
+  margin:0;
+  color:rgba(255,255,255,.78);
+  font-size:13px;
+  font-weight:800;
+}
+.arrow{
+  position:relative;
+  z-index:1;
+  width:48px;
+  height:48px;
+  border-radius:18px;
+  display:grid;
+  place-items:center;
+  color:#062e18;
+  background:#fff;
+  box-shadow:0 12px 28px rgba(0,0,0,.16);
+}
+.arrow svg{width:22px;height:22px}
+
+.footer{
+  display:flex;
+  justify-content:center;
+  margin-top:30px;
+  padding:24px 4px 0;
+  color:#8d9a93;
+  font-size:11px;
+  font-weight:700;
+  text-align:center;
+  letter-spacing:.04em;
+}
+@media (max-width:920px){
+  .page{width:min(100% - 28px,760px)}
+  .topbar{align-items:flex-start;border-radius:26px}
+  .nav{flex-wrap:wrap;justify-content:flex-end}
+  .hero{
+    grid-template-columns:1fr;
+    gap:18px;
+    min-height:auto;
+    padding-top:12px;
+  }
+  .hero-visual{min-height:auto}
+  .phone-card{max-width:480px}
+  .quick-launch,.grid,.flow{grid-template-columns:1fr}
+  .section{padding:26px}
+  .section-head{display:block}
+  .note{margin-top:12px}
+}
+@media (max-width:560px){
+  .page{width:min(100% - 20px,420px);padding-top:12px}
+  .topbar{
+    position:relative;
+    top:auto;
+    display:block;
+    padding:12px;
+  }
+  .brand{width:100%;margin-bottom:10px}
+  .nav{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+  }
+  .nav a{
+    justify-content:center;
+    padding:0 8px;
+    background:rgba(6,199,85,.07);
+  }
+  h1{font-size:42px}
+  .lead{font-size:15px}
+  .hero-actions{display:grid}
+  .button{width:100%}
+  .phone-screen{min-height:450px}
+  .float-label{display:none}
+  .quick-launch{margin-bottom:38px}
+  .section{border-radius:28px;padding:20px}
+  .grid{gap:12px}
+  .card{min-height:220px}
+  
+.visual-section{
+  overflow:hidden;
+}
+.visual-grid{
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:16px;
+  margin-top:22px;
+}
+.visual-card{
+  overflow:hidden;
+  margin:0;
+  border:1px solid rgba(16,32,23,.08);
+  border-radius:26px;
+  background:#fff;
+  box-shadow:var(--shadow-soft);
+}
+.visual-card.large{
+  grid-row:span 2;
+}
+.visual-card img{
+  display:block;
+  width:100%;
+  aspect-ratio:16/10;
+  object-fit:cover;
+  background:#eaf8ff;
+}
+.visual-card.large img{
+  aspect-ratio:1/1;
+}
+.visual-card figcaption{
+  padding:14px 16px 16px;
+}
+.visual-card b{
+  display:block;
+  color:#183524;
+  font-size:14px;
+  font-weight:950;
+}
+.visual-card span{
+  display:block;
+  margin-top:4px;
+  color:#718176;
+  font-size:12px;
+  font-weight:800;
+}
+
+.footer{display:block}
+  .footer-credit{display:block;margin:4px 0 12px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*:before,*:after{
+    transition:none!important;
+    animation:none!important;
+  }
 }
 </style>
 </head>
 <body>
 <div class="page">
-  <div class="hero-art" aria-hidden="true">
-    <div class="mock-card"><div class="bear"><i></i></div></div>
-    <div class="float f1">✓</div>
-    <div class="float f2">⌘</div>
-    <div class="float f3">◎</div>
-    <div class="float f4">?</div>
-  </div>
-
-  <header class="intro">
-    <p class="eyebrow">LINE Creators Toolkit</p>
-    <h1>LINEスタンプ・絵文字<br>制作を、もっとスマートに。</h1>
-    <p class="lead">切り出し、見えチェック、タグ選定まで。<br>制作フローを効率化するプロ向けツールを揃えました。</p>
+  <header class="topbar">
+    <a class="brand" href="./index.html" aria-label="スタンプわーくラボ">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 5.5h12c1.1 0 2 .9 2 2v7.2c0 1.1-.9 2-2 2h-7.4L6.8 20v-3.3H6c-1.1 0-2-.9-2-2V7.5c0-1.1.9-2 2-2Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="brand-text">
+        <span>スタンプわーくラボ</span>
+        <small>Members Toolkit</small>
+      </span>
+    </a>
+    <nav class="nav" aria-label="ページ内メニュー">
+      <a href="#tools">制作ツール</a>
+      <a href="#tags">タグ管理</a>
+      <a href="#flow">申請フロー</a>
+      <a href="https://creator.line.me/ja/">公式ページ</a>
+    </nav>
   </header>
 
-  <div class="badges" aria-label="特徴">
-    <div class="badge">
-      <div>
-        <svg viewBox="0 0 48 48" fill="none"><path d="M25 5 12 26h10l-3 17 17-24H25l6-14Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg>
-        <b>スピードUP<br>制作を効率化</b>
-      </div>
-    </div>
-    <div class="badge">
-      <div>
-        <svg viewBox="0 0 48 48" fill="none"><path d="M12 29c5-9 12-12 22-10M33 11h6v6M36 19c-4 10-12 15-25 14M15 37H9v-6" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <b>クオリティUP<br>チェックで安心</b>
-      </div>
-    </div>
-    <div class="badge">
-      <div>
-        <svg viewBox="0 0 48 48" fill="none"><path d="M24 8v7M24 33v7M8 24h7M33 24h7M15 15l5 5M28 28l5 5M33 15l-5 5M20 28l-5 5" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-        <b>らくらく申請<br>一括自動タグ付け</b>
-      </div>
-    </div>
-  </div>
-
   <main>
-    <section class="section">
-      <h2>制作ツール</h2>
-      <p class="note">画像作成後の確認、整形、タグ付けに使うツールです。</p>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">購入者専用・LINEスタンプ制作環境</p>
+        <h1 id="hero-title">作る、整える、<br><span class="hero-accent">申請する。</span></h1>
+        <p class="lead">スタンプと絵文字づくりで迷いやすい「切り出し」「見え方チェック」「タグ整理」「申請準備」を、ひとつの制作机にまとめました。</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#tools">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            ツールを開く
+          </a>
+          <a class="button secondary" href="https://yayoi333.github.io/linewl/tagm.html">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 5h12v14H6V5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 10h6M9 14h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            タグ管理へ
+          </a>
+        </div>
+        <p class="member-note">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 20 7v5c0 5-3.3 8-8 9-4.7-1-8-4-8-9V7l8-4Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m8.8 12.1 2.1 2.1 4.6-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          このページは購入者様専用ページです。外部に共有しないようにお願いします。
+        </p>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="phone-card">
+          <div class="phone-screen">
+            <div class="screen-head">
+              <div>
+                <span>Today’s workspace</span>
+                <b>スタンプ制作デスク</b>
+              </div>
+              <div class="dots"><i></i><i></i><i></i></div>
+            </div>
+            <div class="chat-area">
+              <div class="chat-bubble">画像ができたら、まず切り出しです。</div>
+              <div class="chat-bubble user">その次は見え方チェックです。</div>
+              <div class="chat-bubble">タグまで整えたら申請へ進めます。</div>
+            </div>
+            <div class="workspace-card">
+              <small>QUICK START</small>
+              <strong>今日の作業を、ここから始めましょう。</strong>
+              <div class="mini-grid">
+                <div class="mini-item">
+                  <span class="mini-icon">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M12 4v16M6 9l6 4 6-4M6 15l6-4 6 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span><b>切り出し</b><span>スタンプ・絵文字画像を整えます</span></span>
+                </div>
+                <div class="mini-item">
+                  <span class="mini-icon">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4L19 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span><b>チェック</b><span>小さな表示で違和感を確認します</span></span>
+                </div>
+                <div class="mini-item">
+                  <span class="mini-icon">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 5h9l3 3v11H6V5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                  </span>
+                  <span><b>タグ整理</b><span>申請前の作業をまとめます</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="float-label two">申請前の道具箱</span>
+      </div>
+    </section>
+
+    <div class="quick-launch" aria-label="このページの特徴">
+      <div class="launch-item">
+        <b>01 / FLOW</b>
+        <span>作業順に並べているので、次に何を開くかで迷いません。</span>
+      </div>
+      <div class="launch-item">
+        <b>02 / TOOLBOX</b>
+        <span>切り出し、見え方チェック、タグ整理まで、このページからまとめて開けます。</span>
+      </div>
+      <div class="launch-item">
+        <b>03 / SHORTCUT</b>
+        <span>申請時の負担を減らし、短時間で申請リクエストを出せるようになります。</span>
+      </div>
+    </div>
+    <section class="section" id="tools">
+      <div class="section-head">
+        <div>
+          <span class="kicker">CREATE</span>
+          <h2>制作ツール</h2>
+        </div>
+        <p class="note">画像の切り出し、サイズ調整、見え方チェックに使うツールです。</p>
+      </div>
       <div class="grid">
-        <a class="card" href="https://yayoi333.github.io/linesk/#access=ki3ri8-da4su1">
-          <span class="icon blue"><svg viewBox="0 0 48 48" fill="none"><path d="M24 10v28M12 20l12 8 12-8M12 28l12-8 12 8" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <a class="card" style="--accent:#3478f6;--tone:#e9f2ff" href="https://yayoi333.github.io/linesk/#access=ki3ri8-da4su1">
+          <span class="icon"><svg viewBox="0 0 48 48" fill="none"><path d="M24 10v28M12 20l12 8 12-8M12 28l12-8 12 8" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <span class="label">Sticker Cutout</span>
           <h3>切り出しくん</h3>
-          <p>スタンプ・絵文字制作の切り出し作業用ページ。</p>
+          <p>スタンプ制作の切り出し作業用ページです。</p>
+          <span class="open">開く <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
-        <a class="card" href="https://yayoi333.github.io/lineek/#access=e3mo8-ji4e1">
-          <span class="icon pink"><svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="15" stroke="currentColor" stroke-width="4"/><path d="M18 21h.01M30 21h.01M18 29c4 4 8 4 12 0" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></span>
+
+        <a class="card" style="--accent:#ff5aa4;--tone:#fff0f7" href="https://yayoi333.github.io/lineek/#access=e3mo8-ji4e1">
+          <span class="icon"><svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="15" stroke="currentColor" stroke-width="4"/><path d="M18 21h.01M30 21h.01M18 29c4 4 8 4 12 0" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></span>
           <span class="label">Emoji Cutout</span>
           <h3>絵文字切り出しくん</h3>
-          <p>絵文字制作向けの切り出し作業用ページ。</p>
+          <p>絵文字制作向けの切り出し作業用ページです。</p>
+          <span class="open">開く <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
-        <a class="card" href="https://yayoi333.github.io/lineskchk/">
-          <span class="icon orange"><svg viewBox="0 0 48 48" fill="none"><path d="M15 24l7 7 14-16" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="10" y="10" width="28" height="28" rx="8" stroke="currentColor" stroke-width="4"/></svg></span>
+
+        <a class="card" style="--accent:#ff8a00;--tone:#fff4e3" href="https://yayoi333.github.io/lineskchk/">
+          <span class="icon"><svg viewBox="0 0 48 48" fill="none"><path d="M15 24l7 7 14-16" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="10" y="10" width="28" height="28" rx="8" stroke="currentColor" stroke-width="4"/></svg></span>
           <span class="label">Checker</span>
           <h3>映えチェッカーくん</h3>
-          <p>見え方や印象の確認に使うチェック用ページ。</p>
+          <p>制作途中のスタンプ・絵文字でも、スマホでの見え方を確認できます。絵文字でリアクションもできるよ！</p>
+          <span class="open">開く <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
       </div>
     </section>
 
-    <section class="section">
-      <h2>タグ管理・申請ツール</h2>
-      <p class="note">画像からタグ付け実行リストを作るためのAIツールです。</p>
+    <section class="section" id="tags">
+      <div class="section-head">
+        <div>
+          <span class="kicker">SUBMIT</span>
+          <h2>タグ管理・申請ツール</h2>
+        </div>
+        <p class="note">画像からタグ付け実行リストを作り、申請前の整理まで進めるためのツールです。</p>
+      </div>
       <div class="grid">
-        <a class="card tall" href="https://yayoi333.github.io/linewl/tagm.html">
-          <span class="icon green"><svg viewBox="0 0 48 48" fill="none"><path d="M11 12h20l7 7v17H11V12Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><circle cx="20" cy="24" r="3" fill="currentColor"/></svg></span>
+        <a class="card" style="--accent:#06c755;--tone:#e8fff1" href="https://yayoi333.github.io/linewl/tagm.html">
+          <span class="icon"><svg viewBox="0 0 48 48" fill="none"><path d="M11 12h20l7 7v17H11V12Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><circle cx="20" cy="24" r="3" fill="currentColor"/></svg></span>
           <span class="label">Tag Manager</span>
-          <h3>LINEスタンプ・絵文字<br>タグ管理マネージャー</h3>
+          <h3>タグ管理マネージャー</h3>
           <p>タグ確認、画像一覧、申請前チェックに使えます。</p>
+          <span class="open">開く <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
-        <a class="card tall" href="https://chatgpt.com/g/g-6a0365ad2f4c8191a6a0151140c7e211-linesutanhuhui-wen-zi-taguzi-dong-xuan-ding-kun">
-          <span class="icon violet"><svg viewBox="0 0 48 48" fill="none"><path d="M24 7l3 10 10 3-10 3-3 10-3-10-10-3 10-3 3-10ZM36 28l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></span>
+
+        <a class="card" style="--accent:#8257e6;--tone:#f3efff" href="https://chatgpt.com/g/g-6a0365ad2f4c8191a6a0151140c7e211-linesutanhuhui-wen-zi-taguzi-dong-xuan-ding-kun">
+          <span class="icon"><svg viewBox="0 0 48 48" fill="none"><path d="M24 7l3 10 10 3-10 3-3 10-3-10-10-3 10-3 3-10ZM36 28l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg></span>
           <span class="label">AI Tagging</span>
-          <h3>画像からタグを自動選定GPT / Gem</h3>
-          <p>スタンプ・絵文字画像から、申請に使うタグ付け実行リストを作成</p>
+          <h3>画像からタグを自動選定GPT</h3>
+          <p>スタンプ・絵文字画像から、申請に使うタグ付け実行リストを作成します。</p>
+          <span class="open">開く <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
-        <a class="card tall" href="https://yayoi333.github.io/linewl/copipe.html">
-          <span class="icon mint"><svg viewBox="0 0 48 48" fill="none"><path d="M11 12h20l7 7v17H11V12Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><circle cx="20" cy="24" r="3" fill="currentColor"/></svg></span>
+
+        <a class="card" style="--accent:#27c2a3;--tone:#e7fbf6" href="https://yayoi333.github.io/linewl/copipe.html">
+          <span class="icon"><svg viewBox="0 0 48 48" fill="none"><path d="M15 13h21v24H15V13Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M10 18V9h20" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <span class="label">Copy/Auto Tool</span>
-          <h3>申請コピペさん</h3>
-          <p>コピペツール・一括自動タグ付けツールの保存方法と使い方。</p>
+          <h3>申請時のコピペ・タグ付けツール</h3>
+          <p>コピペツール・一括自動タグ付けツールの保存方法と使い方を確認できます。</p>
+          <span class="open">開く <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
       </div>
     </section>
 
-    <section class="section">
-      <h2>公式リンク</h2>
-      <p class="note">申請作業で使う外部ページです。</p>
+    <section class="section flow" id="flow">
+      <div>
+        <div class="section-head">
+          <div>
+            <span class="kicker">WORKFLOW</span>
+            <h2>制作から申請まで</h2>
+          </div>
+          <p class="note">作った画像を迷わず次の工程へ渡せるように、作業順で並べています。</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <div>
+              <h3>切り出す</h3>
+              <p>スタンプまたは絵文字用に画像を整えます。</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <div>
+              <h3>見え方を確認する</h3>
+              <p>一覧や小さな表示で違和感がないか確認します。</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-num">3</span>
+            <div>
+              <h3>タグを整えて申請へ</h3>
+              <p>タグ候補を作成し、公式ページで登録作業を進めます。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <a class="official" href="https://creator.line.me/ja/">
-        <span class="icon"><svg viewBox="0 0 48 48" fill="none"><path d="M18 14h16v16M34 14 15 33" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 18v17h17" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></span>
+        <span class="pill">Official</span>
         <span>
-          <span class="pill">Official</span>
           <h3>LINEクリエイターズマーケット</h3>
-          <p>スタンプ・絵文字の登録、申請、管理を行う公式ページ。</p>
+          <p>スタンプ・絵文字の登録、申請、管理を行う公式ページです。</p>
+        </span>
+        <span class="arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
       </a>
     </section>
   </main>
+
+  <footer class="footer">
+    <span>LINE Sticker&amp;Emoji Work Labo Developed by YAYOI2026</span>
+  </footer>
 </div>
 </body>
 </html>
