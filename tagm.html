@@ -518,6 +518,96 @@
   }
   .btn-export:hover { background: #ffeedd; border-color: #c08050; }
 
+  .btn-info {
+    background: #ff8a1f;
+    color: #ffffff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #e26f00;
+    font-size: 13px;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-info:hover { background: #e87307; border-color: #c65f00; }
+
+  .info-field {
+    width: 100%;
+    background: white;
+    border: 1px solid #d4e6c8;
+    border-radius: 8px;
+    padding: 9px 10px;
+    color: #2d3d28;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+  }
+  .info-field:focus {
+    border-color: #5fa856;
+    box-shadow: 0 0 0 2px rgba(95, 168, 86, 0.14);
+  }
+  .info-main-input {
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+    font-family: 'Crimson Pro', serif;
+    font-weight: 600;
+  }
+  .info-main-select {
+    appearance: auto;
+    min-width: 0;
+    background: #fff8f0;
+    border-color: #f0c99b;
+  }
+  .info-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 176px;
+    background: #ffffff;
+    border: 1px solid #d4e6c8;
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .info-preview-cell {
+    aspect-ratio: 1;
+    background: var(--thumb-bg, #e7f1de);
+    border: 1px solid #e3eedb;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .info-preview-cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .info-preview-cell span {
+    color: #a9c79a;
+    font-size: 11px;
+  }
+  .info-stamp-preview {
+    width: min(240px, 70vw);
+    background: var(--thumb-bg, #e7f1de);
+    border: 1px solid #d4e6c8;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+  }
+  .info-stamp-preview img {
+    max-width: 100%;
+    max-height: 260px;
+    object-fit: contain;
+    display: block;
+  }
+
   /* グループラベル */
   .btn-group-label {
     font-size: 10px;
@@ -581,10 +671,10 @@
       <p class="text-sm mt-1" style="color: #6b8060;">LINEスタンプと絵文字のタグ付け・確認ツール</p>
     </div>
     <!-- ボタン群：3グループ縦並び -->
-    <div class="flex flex-col gap-2 items-end">
+    <div class="flex flex-col gap-2 items-start">
 
       <!-- グループ1: 表示設定（緑系・既存スタイル） -->
-      <div class="flex gap-2 items-center flex-wrap justify-end">
+      <div class="flex gap-2 items-center flex-wrap justify-start">
         <button id="mode-toggle" onclick="toggleDisplayMode()" class="btn-secondary"></button>
         <!-- 背景色ピッカー -->
         <div class="bg-picker-row" id="bg-picker">
@@ -628,7 +718,7 @@
       </div>
 
       <!-- グループ2: 読み込み（青系） -->
-      <div class="flex gap-1.5 items-center flex-wrap justify-end">
+      <div class="flex gap-1.5 items-center flex-wrap justify-start">
         <a href="https://chatgpt.com/g/g-6a0365ad2f4c8191a6a0151140c7e211-linesutanhuhui-wen-zi-takuzi-ketiyan"
            target="_blank" rel="noopener noreferrer" class="btn-gpt">タグ付けGPT</a>
         <span class="btn-group-label blue">読み込み</span>
@@ -644,7 +734,8 @@
       </div>
 
       <!-- グループ3: 書き出し（オレンジ系） -->
-      <div class="flex gap-1.5 items-center flex-wrap justify-end">
+      <div class="flex gap-1.5 items-center flex-wrap justify-start">
+        <button onclick="openInfo()" class="btn-info">情報</button>
         <span class="btn-group-label orange">書き出し</span>
         <button onclick="openJsonPreview()" class="btn-export">JSON プレビュー</button>
         <button onclick="exportJSON()" class="btn-export">JSON エクスポート</button>
@@ -691,6 +782,55 @@
   <div class="flex justify-end gap-2 mt-4">
     <button onclick="document.getElementById('import-modal').close()" class="btn-secondary">キャンセル</button>
     <button onclick="performImport()" class="btn-primary">インポート</button>
+  </div>
+</dialog>
+
+<dialog id="info-modal" style="border: none; border-radius: 14px; padding: 0; max-width: 860px; width: 92vw; background: #f4faf0; box-shadow: 0 20px 60px rgba(50,40,25,0.2);">
+  <div style="padding: 24px;">
+    <div class="flex items-start justify-between gap-3 mb-4">
+      <div>
+        <h2 class="display-font text-2xl" style="color: #2d4a25;">スタンプ名・説明文</h2>
+        <p class="text-sm mt-1" style="color: #6b8060;">タイトル、説明文、絵文字のメイン画像番号を編集できます。</p>
+      </div>
+      <button onclick="document.getElementById('info-modal').close()" class="btn-secondary">閉じる</button>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <section class="bg-white border rounded-xl p-4" style="border-color:#d4e6c8;">
+        <div class="text-[10px] uppercase tracking-[0.18em] mb-3" style="color:#a9c79a;">Japanese</div>
+        <label class="block text-xs mb-1" style="color:#6b8060;">タイトル（絵文字名・スタンプ名）</label>
+        <input id="info-ja-title" class="info-field mb-3" maxlength="40" oninput="updateInfoField('jaTitle', this.value)">
+        <label class="block text-xs mb-1" style="color:#6b8060;">説明文コメント</label>
+        <textarea id="info-ja-description" class="info-field" rows="4" maxlength="160" oninput="updateInfoField('jaDescription', this.value)"></textarea>
+      </section>
+
+      <section class="bg-white border rounded-xl p-4" style="border-color:#d4e6c8;">
+        <div class="text-[10px] uppercase tracking-[0.18em] mb-3" style="color:#a9c79a;">English</div>
+        <label class="block text-xs mb-1" style="color:#6b8060;">Title (En)</label>
+        <input id="info-en-title" class="info-field mb-3" maxlength="40" oninput="updateInfoField('enTitle', this.value)">
+        <label class="block text-xs mb-1" style="color:#6b8060;">Description (En)</label>
+        <textarea id="info-en-description" class="info-field" rows="4" maxlength="160" oninput="updateInfoField('enDescription', this.value)"></textarea>
+      </section>
+    </div>
+
+    <section id="info-main-section" class="bg-white border rounded-xl p-4 mt-4" style="border-color:#d4e6c8;">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div style="flex: 1; min-width: 260px;">
+          <div id="info-main-title" class="text-[10px] uppercase tracking-[0.18em] mb-3" style="color:#a9c79a;">メイン画像（4個選択）</div>
+          <div id="info-main-controls" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3"></div>
+          <textarea id="info-payload" class="info-field" rows="3" readonly style="font-family:'SF Mono', Consolas, monospace; font-size:12px;"></textarea>
+        </div>
+        <div>
+          <div id="info-main-preview-title" class="text-xs mb-2" style="color:#6b8060;">メイン画像プレビュー</div>
+          <div id="info-main-preview" class="info-preview-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="copyInfoPayload()" class="btn-export">コピペさん用コピー</button>
+      <button onclick="document.getElementById('info-modal').close()" class="btn-primary">完了</button>
+    </div>
   </div>
 </dialog>
 
@@ -1330,8 +1470,10 @@ let state = loadState() || {
   collectionName: '',
   importedAt: '',
   tags: {},
-  userMustTags: []
+  userMustTags: [],
+  meta: createEmptyMeta()
 };
+state.meta = normalizeMeta(state.meta);
 
 let stickerImages = {}; // Object URL キャッシュ。キーは normKey 済み（"1", "2", ...）
 let specialImages = {}; // メイン画像・タブ画像など { main: url, tab: url, ... }
@@ -1494,6 +1636,106 @@ function saveState() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) { console.error('保存失敗:', e); }
+}
+
+function createEmptyMeta() {
+  return {
+    appName: '',
+    createdAt: '',
+    jaTitle: '',
+    jaDescription: '',
+    enTitle: '',
+    enDescription: '',
+    mainImages: []
+  };
+}
+
+function normalizeMeta(meta) {
+  const base = createEmptyMeta();
+  const src = meta && typeof meta === 'object' ? meta : {};
+  const mainImages = Array.isArray(src.mainImages)
+    ? src.mainImages.slice(0, 4).map(normalizeMainImageNo)
+    : [];
+  while (mainImages.length < 4) mainImages.push('');
+  return {
+    ...base,
+    ...src,
+    mainImages
+  };
+}
+
+function normalizeMainImageNo(value) {
+  const text = String(value || '').replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 65248));
+  const match = text.match(/\d{1,3}/);
+  return match ? match[0].padStart(3, '0') : '';
+}
+
+function parseMetaTxt(text) {
+  const meta = createEmptyMeta();
+  const lines = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  let section = '';
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const sectionMatch = line.match(/^\[(.+?)\]$/);
+    if (sectionMatch) {
+      section = sectionMatch[1].toLowerCase();
+      continue;
+    }
+    const kv = line.match(/^([^:：]+)[:：]\s*(.*)$/);
+    if (!kv) continue;
+    const key = kv[1].trim();
+    const value = kv[2].trim();
+
+    if (/^AppName$/i.test(key)) meta.appName = value;
+    else if (/^CreatedAt$/i.test(key)) meta.createdAt = value;
+    else if (section.includes('japanese')) {
+      if (/^Name$/i.test(key)) meta.jaTitle = value;
+      else if (/^Description$/i.test(key)) meta.jaDescription = value;
+    } else if (section.includes('english')) {
+      if (/^Name$/i.test(key)) meta.enTitle = value;
+      else if (/^Description$/i.test(key)) meta.enDescription = value;
+    }
+  }
+
+  const mainSection = String(text || '').match(/\[(?:メイン画像|main images?|main image)\]([\s\S]*?)(?:\n\s*\[|$)/i);
+  if (mainSection) {
+    meta.mainImages = (mainSection[1].match(/[0-9０-９]{1,3}/g) || [])
+      .map(normalizeMainImageNo)
+      .filter(Boolean)
+      .slice(0, 4);
+  }
+  return normalizeMeta(meta);
+}
+
+function buildMetaTxt() {
+  const meta = normalizeMeta(state.meta);
+  const hasMainImages = meta.mainImages.some(Boolean);
+  const appName = meta.appName || (hasMainImages ? '絵文字切り出しくん' : 'スタンプ切り出しくん');
+  const createdAt = meta.createdAt || `${new Date().toISOString().slice(0, 10)} (JST)`;
+  let text =
+    `AppName: ${appName}\n` +
+    `CreatedAt: ${createdAt}\n\n` +
+    `[Japanese]\n` +
+    `Name: ${meta.jaTitle || state.collectionName || ''}\n` +
+    `Description: ${meta.jaDescription || ''}\n\n` +
+    `[English]\n` +
+    `Name: ${meta.enTitle || ''}\n` +
+    `Description: ${meta.enDescription || ''}\n`;
+  if (hasMainImages || /絵文字|emoji/i.test(appName)) {
+    const nums = [0, 1, 2, 3].map(i => meta.mainImages[i] || '').join('     ').trimEnd();
+    text += `\n[メイン画像]\n${nums}\n`;
+  }
+  return text;
+}
+
+function applyMeta(meta) {
+  state.meta = normalizeMeta(meta);
+  if (state.meta.jaTitle) {
+    state.collectionName = state.meta.jaTitle;
+  }
+  saveState();
 }
 
 // ============================================================
@@ -1718,6 +1960,157 @@ function updateCollectionName(value) {
   state.collectionName = trimmed;
   saveState();
   render();
+}
+
+function openInfo() {
+  state.meta = normalizeMeta(state.meta);
+  const meta = state.meta;
+  document.getElementById('info-ja-title').value = meta.jaTitle || state.collectionName || '';
+  document.getElementById('info-ja-description').value = meta.jaDescription || '';
+  document.getElementById('info-en-title').value = meta.enTitle || '';
+  document.getElementById('info-en-description').value = meta.enDescription || '';
+  renderInfoMainControls();
+  renderInfoPayload();
+  document.getElementById('info-modal').showModal();
+}
+
+function updateInfoField(field, value) {
+  state.meta = normalizeMeta(state.meta);
+  state.meta[field] = String(value || '').trim();
+  if (field === 'jaTitle' && state.meta[field]) {
+    state.collectionName = state.meta[field];
+  }
+  saveState();
+  renderInfoPayload();
+  renderMeta();
+}
+
+function updateInfoMainImage(index, value) {
+  state.meta = normalizeMeta(state.meta);
+  const next = [0, 1, 2, 3].map(i => state.meta.mainImages[i] || '');
+  next[index] = normalizeMainImageNo(value);
+  state.meta.mainImages = next;
+  const input = document.getElementById(`info-main-${index}`);
+  if (input) input.value = next[index] || '';
+  saveState();
+  renderInfoPayload();
+}
+
+function isEmojiInfo() {
+  const meta = normalizeMeta(state.meta);
+  return /絵文字|emoji/i.test(meta.appName || '') || meta.mainImages.some(Boolean);
+}
+
+function getInfoImageKeys() {
+  const keys = new Set(Object.keys(stickerImages || {}));
+  Object.keys(state.tags || {}).forEach(k => {
+    const norm = normKey(k);
+    if (stickerImages[norm]) keys.add(norm);
+  });
+  return Array.from(keys).sort((a, b) => {
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return String(a).localeCompare(String(b), 'ja');
+  });
+}
+
+function renderInfoMainControls() {
+  const title = document.getElementById('info-main-title');
+  const controls = document.getElementById('info-main-controls');
+  if (!controls) return;
+
+  if (!isEmojiInfo()) {
+    if (title) title.textContent = 'スタンプ代表画像';
+    controls.className = 'mb-3';
+    controls.innerHTML = `<p class="text-sm" style="color:#6b8060;">ZIP内の main.png を表示します。</p>`;
+    return;
+  }
+
+  if (title) title.textContent = 'メイン画像（4個選択）';
+  controls.className = 'grid grid-cols-2 md:grid-cols-4 gap-2 mb-3';
+  const meta = normalizeMeta(state.meta);
+  const optionValues = new Set(getInfoImageKeys()
+    .map(k => parseInt(k, 10))
+    .filter(n => !isNaN(n))
+    .map(n => String(n).padStart(3, '0')));
+  meta.mainImages.forEach(no => { if (no) optionValues.add(no); });
+  const options = Array.from(optionValues).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+
+  controls.innerHTML = [0, 1, 2, 3].map(i => {
+    const selected = meta.mainImages[i] || '';
+    const optionHtml = [
+      `<option value="">未選択</option>`,
+      ...options.map(no => {
+        const labelNo = parseInt(no, 10);
+        const label = isNaN(labelNo) ? no : `No.${labelNo}`;
+        return `<option value="${escapeHtml(no)}" ${no === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+      })
+    ].join('');
+    return `<select id="info-main-${i}" class="info-field info-main-select info-main-input" onchange="updateInfoMainImage(${i}, this.value)">${optionHtml}</select>`;
+  }).join('');
+}
+
+function buildInfoPayloadObject() {
+  const meta = normalizeMeta(state.meta);
+  return {
+    enTitle: meta.enTitle || '',
+    enDescription: meta.enDescription || '',
+    jaTitle: meta.jaTitle || state.collectionName || '',
+    jaDescription: meta.jaDescription || '',
+    mainImages: (meta.mainImages || []).filter(Boolean)
+  };
+}
+
+function renderInfoPayload() {
+  const payload = buildInfoPayloadObject();
+  const payloadText = 'LINE_CM_TEXT:' + JSON.stringify(payload);
+  localStorage.setItem('lcmTextPayload', JSON.stringify(payload));
+  const payloadEl = document.getElementById('info-payload');
+  if (payloadEl) payloadEl.value = payloadText;
+  renderInfoMainPreview();
+}
+
+function renderInfoMainPreview() {
+  const el = document.getElementById('info-main-preview');
+  const title = document.getElementById('info-main-preview-title');
+  if (!el) return;
+
+  if (!isEmojiInfo()) {
+    if (title) title.textContent = 'main.png プレビュー';
+    if (specialImages.main) {
+      el.className = 'info-stamp-preview';
+      el.innerHTML = `<img src="${specialImages.main}" alt="main.png">`;
+    } else {
+      el.className = 'info-stamp-preview';
+      el.innerHTML = `<span style="color:#a9c79a;">main.png なし</span>`;
+    }
+    return;
+  }
+
+  if (title) title.textContent = 'メイン画像プレビュー';
+  el.className = 'info-preview-grid';
+  const meta = normalizeMeta(state.meta);
+  const nums = [0, 1, 2, 3].map(i => meta.mainImages[i] || '');
+  el.innerHTML = nums.map(no => {
+    const url = no ? getStickerImage(no) : null;
+    return `<div class="info-preview-cell">${url ? `<img src="${url}" alt="${escapeHtml(no)}">` : `<span>${escapeHtml(no || '-')}</span>`}</div>`;
+  }).join('');
+}
+
+async function copyInfoPayload() {
+  renderInfoPayload();
+  const text = document.getElementById('info-payload').value;
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('コピペ用データをコピーしました。');
+  } catch (e) {
+    const el = document.getElementById('info-payload');
+    el.focus();
+    el.select();
+    document.execCommand('copy');
+    alert('コピペ用データを選択しました。コピーできない場合は手動でコピーしてください。');
+  }
 }
 
 function renderMustTags() {
@@ -2174,7 +2567,8 @@ async function resetAll() {
     collectionName: '',
     importedAt: '',
     tags: {},
-    userMustTags: []
+    userMustTags: [],
+    meta: createEmptyMeta()
   };
   // 画像をメモリからクリア
   Object.values(stickerImages).forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
@@ -2484,6 +2878,7 @@ async function handleZipUpload(event) {
     const newOtherBlobs = {};   // IDB保存用（元ファイル一式を原名のまま）
     const skipped = [];
     let foundTagsJson = null;
+    let foundMeta = null;
 
     const fileEntries = Object.values(zip.files).filter(e => !e.dir);
 
@@ -2500,6 +2895,16 @@ async function handleZipUpload(event) {
           console.warn('tags.json パース失敗:', e);
         }
         // tags.json は再パッケージ用のエントリには含めない（後で新規生成するため）
+        continue;
+      }
+      if (/^meta\.txt$/i.test(baseName)) {
+        try {
+          const text = await entry.async('string');
+          foundMeta = parseMetaTxt(text);
+        } catch (e) {
+          console.warn('meta.txt 読み込み失敗:', e);
+        }
+        // meta.txt は編集後の内容で再生成する
         continue;
       }
 
@@ -2561,6 +2966,13 @@ async function handleZipUpload(event) {
         tagsImportInfo = `\nZIP内の tags.json は形式不正で読み込めませんでした。`;
       }
     }
+    let metaImportInfo = '';
+    if (foundMeta) {
+      applyMeta(foundMeta);
+      metaImportInfo = foundMeta.jaTitle
+        ? `\nZIP内の meta.txt から情報を読み込みました（${foundMeta.jaTitle}）。`
+        : `\nZIP内の meta.txt から情報を読み込みました。`;
+    }
 
     render();
 
@@ -2569,6 +2981,7 @@ async function handleZipUpload(event) {
     if (skipped.length > 0) msg += `\n（メイン画像等：${skipped.join(', ')}）`;
     if (count === 0 && !tagsImported) msg = '画像ファイルが見つかりませんでした。ZIPの中身を確認してください。';
     msg += tagsImportInfo;
+    msg += metaImportInfo;
     alert(msg);
 
   } catch (e) {
@@ -2746,11 +3159,12 @@ async function exportZipWithJson() {
       } else if (!hasOrig && idbKey.startsWith('p:')) {
         fileName = idbKey.slice(2) + '.png';
       }
-      if (fileName) zip.file(fileName, blob);
+      if (fileName && !/(^|\/)(tags\.json|meta\.txt)$/i.test(fileName)) zip.file(fileName, blob);
     }
 
     // zipEntries にあってIDBにないもの（今セッション中だけのもの）も追加
     for (const [name, blob] of Object.entries(zipEntries)) {
+      if (/(^|\/)(tags\.json|meta\.txt)$/i.test(name)) continue;
       if (!zip.files[name]) {
         zip.file(name, blob);
       }
@@ -2759,6 +3173,7 @@ async function exportZipWithJson() {
     // tags.json を追加
     const tagsJson = buildOrderedJsonString();
     zip.file('tags.json', tagsJson);
+    zip.file('meta.txt', buildMetaTxt());
 
     const blob = await zip.generateAsync({ type: 'blob' });
     const baseName = state.collectionName || originalZipName || 'sticker';
