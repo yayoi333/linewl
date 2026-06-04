@@ -730,16 +730,16 @@
           PNG アップロード
           <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" multiple onchange="handlePngUpload(event)" class="hidden">
         </label>
-        <button onclick="openImport()" class="btn-upload">JSON インポート</button>
+        <button onclick="openImport()" class="btn-upload">タグ付けリスト インポート</button>
       </div>
 
       <!-- グループ3: 書き出し（オレンジ系） -->
       <div class="flex gap-1.5 items-center flex-wrap justify-start">
         <button onclick="openInfo()" class="btn-info">情報</button>
         <span class="btn-group-label orange">書き出し</span>
-        <button onclick="openJsonPreview()" class="btn-export">JSON プレビュー</button>
-        <button onclick="exportJSON()" class="btn-export">JSON エクスポート</button>
-        <button onclick="exportZipWithJson()" class="btn-export">ZIP+JSON 保存</button>
+        <button onclick="openJsonPreview()" class="btn-export">タグ付けリスト プレビュー</button>
+        <button onclick="exportJSON()" class="btn-export">タグ付けリスト エクスポート</button>
+        <button onclick="exportZipWithJson()" class="btn-export">ZIP+タグ付けリスト 保存</button>
         <button onclick="exportPNG()" class="btn-export">スクショ PNG 出力</button>
       </div>
 
@@ -763,14 +763,14 @@
 </div>
 
 <dialog id="import-modal" style="border: none; border-radius: 14px; padding: 28px; max-width: 640px; width: 90vw; background: #f4faf0; box-shadow: 0 20px 60px rgba(50,40,25,0.2);">
-  <h2 class="display-font text-2xl mb-2" style="color: #2d4a25;">JSONをインポート</h2>
-  <p class="text-sm mb-4" style="color: #5a7250;">スタンプ集名を入力し、GPT・Gemini・Skillsで生成したタグ対応JSONを読み込みます。</p>
+  <h2 class="display-font text-2xl mb-2" style="color: #2d4a25;">タグ付けリストをインポート</h2>
+  <p class="text-sm mb-4" style="color: #5a7250;">スタンプ集名を入力し、GPT・Gemini・Skillsで生成したタグ付けリストを読み込みます。</p>
 
   <label class="block text-xs mb-1 tracking-wider uppercase" style="color: #6b8060;">Collection name</label>
   <input id="import-name" placeholder="例：harvest春コレ" class="w-full mb-4 px-3 py-2 rounded" style="background:white; font-family:inherit; border: 1px solid #c8dfc0;">
 
   <div class="flex items-center gap-2 mb-2">
-    <label class="text-xs tracking-wider uppercase" style="color: #6b8060;">JSON</label>
+    <label class="text-xs tracking-wider uppercase" style="color: #6b8060;">タグ付けリスト</label>
     <label class="cursor-pointer text-xs px-2 py-1 rounded" style="background: #e6f1de; border: 1px solid #a9c79a; color: #2d4a25;">
       📁 ファイルから読み込む
       <input type="file" accept=".json,application/json" onchange="loadJsonFile(event)" class="hidden">
@@ -2150,7 +2150,7 @@ function renderStickers() {
     el.innerHTML = `
       <div class="text-center py-20 bg-white border border-dashed rounded-xl" style="border-color: #c8dfc0;">
         <p style="color: #6b8060;">データがありません。</p>
-        <p class="text-sm mt-2" style="color: #8ba07d;">「JSONインポート」または「画像ZIPアップロード」から始められます。</p>
+        <p class="text-sm mt-2" style="color: #8ba07d;">「タグ付けリスト インポート」または「画像ZIPアップロード」から始められます。</p>
       </div>
     `;
     return;
@@ -2207,7 +2207,7 @@ function renderStickers() {
     el.innerHTML = `
       <div class="text-center py-12 bg-white border border-dashed rounded-xl" style="border-color: #c8dfc0;">
         <p style="color: #6b8060;">タグデータがありません。</p>
-        <p class="text-sm mt-2" style="color: #8ba07d;">「JSONインポート」または「画像アップロード」から始めてください。</p>
+        <p class="text-sm mt-2" style="color: #8ba07d;">「タグ付けリスト インポート」または「画像アップロード」から始めてください。</p>
       </div>
     `;
     return;
@@ -2598,7 +2598,7 @@ async function loadJsonFile(event) {
     const text = await file.text();
     // 念のためパースだけ試して、エラーなら警告
     try { JSON.parse(text); } catch (e) {
-      alert('JSONとして読み込めませんでした: ' + e.message);
+      alert('タグ付けリストとして読み込めませんでした: ' + e.message);
       event.target.value = '';
       return;
     }
@@ -2623,13 +2623,13 @@ function performImport() {
   const name = document.getElementById('import-name').value.trim();
   const text = document.getElementById('import-text').value.trim();
 
-  if (!text) { alert('JSONを入力してください'); return; }
+  if (!text) { alert('タグ付けリストを入力してください'); return; }
 
   let parsed;
   try {
     parsed = JSON.parse(text);
   } catch (e) {
-    alert('JSONパース失敗: ' + e.message);
+    alert('タグ付けリストの読み込みに失敗しました: ' + e.message);
     return;
   }
 
@@ -2715,7 +2715,7 @@ function openJsonPreview() {
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>JSON Preview: ${escapeHtml(title)}</title>
+<title>タグ付けリスト Preview: ${escapeHtml(title)}</title>
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <style>
   body {
@@ -3031,7 +3031,7 @@ function applyImportedJson(parsed, fallbackName) {
 
   const keys = Object.keys(tagsObj);
   if (keys.length === 0) {
-    return { success: false, error: '空のJSONです' };
+    return { success: false, error: '空のタグ付けリストです' };
   }
   for (const k of keys) {
     if (!Array.isArray(tagsObj[k])) {
