@@ -608,6 +608,20 @@ h2{
   width:15px;
   height:15px;
 }
+.card-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:auto;
+  padding-top:22px;
+}
+.card-actions .open{
+  margin-top:0;
+  padding:8px 12px;
+  border:1px solid rgba(16,32,23,.08);
+  border-radius:999px;
+  background:#fff;
+}
 .flow{
   display:grid;
   grid-template-columns:minmax(0,1fr) minmax(280px,.52fr);
@@ -860,7 +874,7 @@ h2{
       <div class="hero-copy">
         <p class="eyebrow">購入者専用・LINEスタンプ制作環境</p>
         <h1 id="hero-title">作る、整える、<br><span class="hero-accent">申請する。</span></h1>
-        <p class="lead">スタンプと絵文字づくりで迷いやすい「切り出し」「見え方チェック」「タグ整理」「申請準備」を、ひとつの制作机にまとめました。</p>
+        <p class="lead">スタンプと絵文字づくりで迷いやすい「切り出し」「見え方チェック」「タグ整理」「申請準備」を、ひとつのスペースにまとめました。</p>
         <div class="hero-actions">
           <a class="button primary" href="#tools">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -873,7 +887,7 @@ h2{
         </div>
         <p class="member-note">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 20 7v5c0 5-3.3 8-8 9-4.7-1-8-4-8-9V7l8-4Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m8.8 12.1 2.1 2.1 4.6-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          このページは購入者様専用ページです。外部に共有しないようにお願いします。
+          このページは購入者様専用ページです。外部に共有しないようお願いいたします。
         </p>
       </div>
 
@@ -883,14 +897,15 @@ h2{
             <div class="screen-head">
               <div>
                 <span>Today’s workspace</span>
-                <b>スタンプ制作デスク</b>
+                <b>スタンプワーク</b>
               </div>
               <div class="dots"><i></i><i></i><i></i></div>
             </div>
             <div class="chat-area">
-              <div class="chat-bubble">画像ができたら、まず切り出しです。</div>
-              <div class="chat-bubble user">その次は見え方チェックです。</div>
-              <div class="chat-bubble">タグまで整えたら申請へ進めます。</div>
+              <div class="chat-bubble">画像ができたら、切り出そう！</div>
+              <div class="chat-bubble user">見映えもチェックして</div>
+              <div class="chat-bubble">タグ選びもラクラク♪</div>
+              <div class="chat-bubble user">申請リクエストまでサクッと完了✨</div>
             </div>
             <div class="workspace-card">
               <small>QUICK START</small>
@@ -996,13 +1011,16 @@ h2{
           <span class="open">開く <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
 
-        <a class="card" style="--accent:#27c2a3;--tone:#e7fbf6" href="https://yayoi333.github.io/linewl/copipe.html">
+        <div class="card" style="--accent:#27c2a3;--tone:#e7fbf6">
           <span class="icon"><svg viewBox="0 0 48 48" fill="none"><path d="M15 13h21v24H15V13Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M10 18V9h20" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <span class="label">Copy/Auto Tool</span>
           <h3>申請時のコピペ・タグ付けツール</h3>
-          <p>コピペツール・一括自動タグ付けツールの保存方法と使い方を確認できます。</p>
-          <span class="open">開く <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        </a>
+          <p>コピペツール・一括自動タグ付けツールの登録方法と使い方を確認できます。</p>
+          <div class="card-actions">
+            <a class="open" href="https://yayoi333.github.io/linewl/copipe.html">PC用 <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            <a class="open" href="https://yayoi333.github.io/linewl/copipem.html">スマホ用 <svg viewBox="0 0 24 24" fill="none"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1010,31 +1028,30 @@ h2{
       <div>
         <div class="section-head">
           <div>
-            <span class="kicker">WORKFLOW</span>
-            <h2>制作から申請まで</h2>
+            <span class="kicker">APPLY</span>
+            <h2>準備ができたら申請へ</h2>
           </div>
-          <p class="note">作った画像を迷わず次の工程へ渡せるように、作業順で並べています。</p>
         </div>
         <div class="steps">
           <div class="step">
             <span class="step-num">1</span>
             <div>
-              <h3>切り出す</h3>
-              <p>スタンプまたは絵文字用に画像を整えます。</p>
+              <h3>ツールの準備</h3>
+              <p>申請ツールをブラウザへ登録します</p>
             </div>
           </div>
           <div class="step">
             <span class="step-num">2</span>
             <div>
-              <h3>見え方を確認する</h3>
-              <p>一覧や小さな表示で違和感がないか確認します。</p>
+              <h3>コピー</h3>
+              <p>タイトルや説明文、タグ付けリストをコピーします</p>
             </div>
           </div>
           <div class="step">
             <span class="step-num">3</span>
             <div>
-              <h3>タグを整えて申請へ</h3>
-              <p>タグ候補を作成し、公式ページで登録作業を進めます。</p>
+              <h3>実行</h3>
+              <p>ツールを使って、申請画面へ貼り付けや、タグ付けを実行します</p>
             </div>
           </div>
         </div>
