@@ -2,6 +2,8 @@
 *.py
 *.pdf
 *.json
+!tags_sticker_latest.json
+!tags_sticker_autosuggest_only.json
 __pycache__/
 tag_compare_output/
 browser_session/

@@ -60,6 +60,17 @@
     font-size: 11px;
     margin-right: 2px;
   }
+  .tag-chip.autosuggest {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+  .tag-chip.autosuggest::before {
+    content: '';
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 0;
+  }
   /* 10個目以降のタグ（オーバー） — 紫系でマスタ外（茶系）と区別 */
   .tag-chip.over-limit {
     background: #ede0f5;
@@ -259,6 +270,17 @@
     background: #cce5bf;
     border-color: #5fa856;
     color: #2d4a25;
+  }
+  .tag-option.autosuggest {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+  .tag-option.autosuggest:hover,
+  .tag-option.autosuggest.selected {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1e40af;
   }
   .tag-option.custom {
     background: #fdf2ec;
@@ -839,7 +861,7 @@
 // ============================================================
 // LINE 公式タグマスタ
 // ============================================================
-const TAG_MASTER = {
+let TAG_MASTER = {
   "会話 (150)": [
     "はぁ",
     "おはよう",
@@ -1454,10 +1476,166 @@ const TAG_MASTER = {
 };
 
 const ALL_MASTER_TAGS = new Set();
-Object.values(TAG_MASTER).forEach(arr => arr.forEach(t => ALL_MASTER_TAGS.add(t)));
+
+function rebuildAllMasterTags() {
+  ALL_MASTER_TAGS.clear();
+  Object.values(TAG_MASTER).forEach(arr => arr.forEach(t => ALL_MASTER_TAGS.add(t)));
+}
+
+rebuildAllMasterTags();
+
+// 公開タグにはないが、スタンプ申請画面のオートサジェストで出るタグ。
+// 同階層または assets/ に tags_sticker_autosuggest_only.json があれば起動時に追加読み込みする。
+const AUTOSUGGEST_TAG_MASTER = {
+  "オートサジェスト": [
+    "嬉しい"
+  ]
+};
+
+const AUTOSUGGEST_TAGS = new Set();
+Object.values(AUTOSUGGEST_TAG_MASTER).forEach(arr => arr.forEach(t => AUTOSUGGEST_TAGS.add(t)));
+
+function normalizeCategoryName(name, tags) {
+  const label = String(name || 'タグ').replace(/\s*\(\d+\)$/, '').trim() || 'タグ';
+  return `${label} (${tags.length})`;
+}
+
+function normalizeTagsArray(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter(v => typeof v === 'string').map(v => v.trim()).filter(Boolean))];
+}
+
+function tagsObjectToCategoryMap(obj) {
+  const result = {};
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return result;
+  for (const [name, value] of Object.entries(obj)) {
+    const tags = normalizeTagsArray(value);
+    if (tags.length > 0) result[normalizeCategoryName(name, tags)] = tags;
+  }
+  return result;
+}
+
+function tagsArrayToCategoryMap(arr, fallbackName = 'タグ') {
+  if (!Array.isArray(arr)) return {};
+  const categoryEntries = {};
+  arr.forEach((item, idx) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+    const name = item.name || item.category || item.title || `タグ${idx + 1}`;
+    const tags = normalizeTagsArray(item.tags || item.items || item.values);
+    if (tags.length > 0) categoryEntries[normalizeCategoryName(name, tags)] = tags;
+  });
+  if (Object.keys(categoryEntries).length > 0) return categoryEntries;
+  const tags = normalizeTagsArray(arr);
+  return tags.length > 0 ? { [normalizeCategoryName(fallbackName, tags)]: tags } : {};
+}
+
+function parseTagJsonToCategoryMap(json) {
+  if (!json) return {};
+  if (Array.isArray(json)) return tagsArrayToCategoryMap(json);
+  if (typeof json !== 'object') return {};
+
+  if (json.categories && typeof json.categories === 'object') {
+    const fromCategories = Array.isArray(json.categories)
+      ? tagsArrayToCategoryMap(json.categories)
+      : tagsObjectToCategoryMap(json.categories);
+    if (Object.keys(fromCategories).length > 0) return fromCategories;
+  }
+
+  if (json.tags) {
+    if (Array.isArray(json.tags)) return tagsArrayToCategoryMap(json.tags);
+    if (typeof json.tags === 'object') {
+      const fromTags = tagsObjectToCategoryMap(json.tags);
+      if (Object.keys(fromTags).length > 0) return fromTags;
+    }
+  }
+
+  return tagsObjectToCategoryMap(json);
+}
+
+function collectTagsFromJson(value, out = new Set()) {
+  if (!value) return out;
+  if (Array.isArray(value)) {
+    value.forEach(v => {
+      if (typeof v === 'string') out.add(v);
+      else collectTagsFromJson(v, out);
+    });
+    return out;
+  }
+  if (typeof value === 'object') {
+    if (Array.isArray(value.tags)) collectTagsFromJson(value.tags, out);
+    if (value.categories && typeof value.categories === 'object') collectTagsFromJson(value.categories, out);
+    Object.values(value).forEach(v => collectTagsFromJson(v, out));
+  }
+  return out;
+}
+
+async function loadOfficialTags() {
+  if (location.protocol === 'file:') return;
+  const paths = ['tags_sticker_latest.json', 'assets/tags_sticker_latest.json'];
+  for (const path of paths) {
+    try {
+      const res = await fetch(path, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const json = await res.json();
+      const nextMaster = parseTagJsonToCategoryMap(json);
+      if (Object.keys(nextMaster).length === 0) continue;
+      TAG_MASTER = nextMaster;
+      rebuildAllMasterTags();
+      const label = json.date || json.updatedAt || json.version || 'latest';
+      const dateEl = document.getElementById('tag-master-date');
+      if (dateEl) dateEl.textContent = String(label);
+      break;
+    } catch (e) {
+      console.warn('公開タグJSON読み込み失敗:', path, e);
+    }
+  }
+}
+
+async function loadAutosuggestTags() {
+  if (location.protocol === 'file:') return;
+  const paths = ['tags_sticker_autosuggest_only.json', 'assets/tags_sticker_autosuggest_only.json'];
+  for (const path of paths) {
+    try {
+      const res = await fetch(path, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const json = await res.json();
+      collectTagsFromJson(json).forEach(tag => {
+        if (!ALL_MASTER_TAGS.has(tag)) AUTOSUGGEST_TAGS.add(tag);
+      });
+      break;
+    } catch (e) {
+      console.warn('オートサジェストタグ読み込み失敗:', path, e);
+    }
+  }
+}
+
+function isStickerTagContext() {
+  return !isEmojiInfo();
+}
+
+function isAutosuggestTagAllowed(tag) {
+  return isStickerTagContext() && AUTOSUGGEST_TAGS.has(tag);
+}
+
+function getTagKind(tag) {
+  if (ALL_MASTER_TAGS.has(tag)) return 'official';
+  if (isAutosuggestTagAllowed(tag)) return 'autosuggest';
+  return 'invalid';
+}
 
 function isValidTag(tag) {
-  return ALL_MASTER_TAGS.has(tag);
+  return getTagKind(tag) !== 'invalid';
+}
+
+function getTagChipMeta(tag, fallbackTitle) {
+  const kind = getTagKind(tag);
+  if (kind === 'autosuggest') {
+    return { classes: ['autosuggest'], title: 'オートサジェストタグ（スタンプ用）' };
+  }
+  if (kind === 'invalid') {
+    return { classes: ['invalid'], title: 'マスタ外タグ' };
+  }
+  return { classes: [], title: fallbackTitle || '公式タグ' };
 }
 
 // ============================================================
@@ -1998,7 +2176,7 @@ function updateInfoMainImage(index, value) {
 
 function isEmojiInfo() {
   const meta = normalizeMeta(state.meta);
-  return /絵文字|emoji/i.test(meta.appName || '') || meta.mainImages.some(Boolean);
+  return /絵文字|emoji/i.test([meta.appName || '', state.collectionName || ''].join(' ')) || meta.mainImages.some(Boolean);
 }
 
 function getInfoImageKeys() {
@@ -2115,12 +2293,15 @@ async function copyInfoPayload() {
 
 function renderMustTags() {
   const el = document.getElementById('must-tags-panel');
-  const chips = state.userMustTags.map((tag, i) => `
-    <span class="tag-chip must ${!isValidTag(tag) ? 'invalid' : ''}" title="${!isValidTag(tag) ? 'マスタ外タグ' : '公式タグ'}">
-      ${escapeHtml(tag)}
-      <button onclick="removeMustTag(${i})" aria-label="削除">×</button>
-    </span>
-  `).join('');
+  const chips = state.userMustTags.map((tag, i) => {
+    const meta = getTagChipMeta(tag, '公式タグ');
+    return `
+      <span class="tag-chip must ${meta.classes.join(' ')}" title="${meta.title}">
+        ${escapeHtml(tag)}
+        <button onclick="removeMustTag(${i})" aria-label="削除">×</button>
+      </span>
+    `;
+  }).join('');
   el.innerHTML = `
     <div class="bg-white border rounded-xl p-4" style="border-color: #d4e6c8;">
       <div class="flex items-baseline gap-2 mb-3">
@@ -2273,12 +2454,11 @@ function renderStickers() {
         <div class="flex-1 flex flex-wrap gap-2 items-center self-center">
           ${tags.map((t, i) => {
             const classes = ['tag-chip'];
-            if (!isValidTag(t)) classes.push('invalid');
+            const meta = getTagChipMeta(t, '公式タグ');
+            classes.push(...meta.classes);
             const globalIdx = i + state.userMustTags.length;
             if (globalIdx >= TAG_LIMIT) classes.push('over-limit');
-            const title = !isValidTag(t)
-              ? 'マスタ外タグ'
-              : (globalIdx >= TAG_LIMIT ? '上限9個を超えています' : '公式タグ');
+            const title = globalIdx >= TAG_LIMIT ? '上限9個を超えています' : meta.title;
             return `
               <span class="${classes.join(' ')}" title="${title}">
                 ${escapeHtml(t)}
@@ -2288,10 +2468,11 @@ function renderStickers() {
           }).join('')}
           ${state.userMustTags.map((t, i) => {
             const classes = ['tag-chip', 'must'];
-            if (!isValidTag(t)) classes.push('invalid');
+            const meta = getTagChipMeta(t, '必須タグ');
+            classes.push(...meta.classes);
             if (i >= TAG_LIMIT) classes.push('over-limit');
             return `
-              <span class="${classes.join(' ')}" title="必須タグ">
+              <span class="${classes.join(' ')}" title="${meta.title}">
                 ${escapeHtml(t)}
               </span>
             `;
@@ -2403,12 +2584,27 @@ function buildPickerOptionsHTML() {
       return `<button class="tag-option ${cls}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`;
     }).join('');
   });
+
+  if (isStickerTagContext()) {
+    let autosuggestTags = Array.from(AUTOSUGGEST_TAGS).sort((a, b) => a.localeCompare(b, 'ja'));
+    if (q) autosuggestTags = autosuggestTags.filter(t => t.toLowerCase().includes(q));
+    autosuggestTags = autosuggestTags.filter(t => !ALL_MASTER_TAGS.has(t));
+    if (autosuggestTags.length > 0) {
+      hasAny = true;
+      optionsHtml += `<div class="cat-section-header">オートサジェスト</div>`;
+      optionsHtml += autosuggestTags.map(t => {
+        const cls = existing.has(t) ? 'selected autosuggest' : 'autosuggest';
+        return `<button class="tag-option ${cls}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`;
+      }).join('');
+    }
+  }
+
   if (!hasAny) {
     optionsHtml = '<span style="font-size:11px; color:#8ba07d; padding:6px;">該当なし</span>';
   }
 
   let customSection = '';
-  if (currentPickerQuery && !ALL_MASTER_TAGS.has(currentPickerQuery)) {
+  if (currentPickerQuery && !isValidTag(currentPickerQuery)) {
     customSection = `
       <div style="border-top: 1px dashed #cce0bc; padding-top: 6px; margin-top: 6px; width:100%;">
         <div style="font-size: 10px; color: #8ba07d; margin-bottom: 4px;">マスタ外（カスタム追加）</div>
@@ -2647,12 +2843,20 @@ function performImport() {
   document.getElementById('import-modal').close();
   render();
 
+  if (result.autosuggestCount > 0) {
+    const list = result.autosuggestTags.slice(0, 20).join('、');
+    const more = result.autosuggestCount > 20 ? ` 他${result.autosuggestCount - 20}個` : '';
+    setTimeout(() => {
+      alert(`オートサジェストタグが ${result.autosuggestCount} 種類ありました：\n\n${list}${more}\n\nスタンプ用として許可タグ扱いにしています。画面上では青色で表示されます。`);
+    }, 200);
+  }
+
   if (result.invalidCount > 0) {
     const list = result.invalidTags.slice(0, 20).join('、');
     const more = result.invalidCount > 20 ? ` 他${result.invalidCount - 20}個` : '';
     setTimeout(() => {
       alert(`⚠ LINE公式マスタにないタグが ${result.invalidCount} 種類ありました：\n\n${list}${more}\n\n該当タグは画面上で警告色（茶色）で表示されています。LINE申請前に置き換えを検討してください。`);
-    }, 200);
+    }, result.autosuggestCount > 0 ? 400 : 200);
   }
 
   if (result.dupCount > 0) {
@@ -2661,7 +2865,7 @@ function performImport() {
     const more = result.dupCount > 20 ? `\n…他${result.dupCount - 20}件` : '';
     setTimeout(() => {
       alert(`⚠ 同じスタンプ内でタグが重複しています（${result.dupCount}件）：\n\n${lines}${more}\n\nLINE申請前に重複の解消を検討してください。`);
-    }, 400);
+    }, result.invalidCount > 0 ? 600 : (result.autosuggestCount > 0 ? 400 : 200));
   }
 }
 
@@ -2948,6 +3152,10 @@ async function handleZipUpload(event) {
     for (const [kind, blob] of Object.entries(newSpecialBlobs)) await idbPut('p:' + kind, blob);
     for (const [name, blob] of Object.entries(newOtherBlobs))  await idbPut('f:' + name, blob);
 
+    if (foundMeta) {
+      applyMeta(foundMeta);
+    }
+
     // tags.json が見つかったら自動でタグデータも反映
     let tagsImported = false;
     let tagsImportInfo = '';
@@ -2956,6 +3164,9 @@ async function handleZipUpload(event) {
       if (result.success) {
         tagsImported = true;
         tagsImportInfo = `\nZIP内の tags.json から ${result.keyCount} 枚分のタグも読み込みました。`;
+        if (result.autosuggestCount > 0) {
+          tagsImportInfo += `\n（オートサジェストタグ ${result.autosuggestCount} 種類：スタンプ用として許可）`;
+        }
         if (result.invalidCount > 0) {
           tagsImportInfo += `\n（マスタ外タグ ${result.invalidCount} 種類あり）`;
         }
@@ -2968,7 +3179,6 @@ async function handleZipUpload(event) {
     }
     let metaImportInfo = '';
     if (foundMeta) {
-      applyMeta(foundMeta);
       metaImportInfo = foundMeta.jaTitle
         ? `\nZIP内の meta.txt から情報を読み込みました（${foundMeta.jaTitle}）。`
         : `\nZIP内の meta.txt から情報を読み込みました。`;
@@ -3041,9 +3251,11 @@ function applyImportedJson(parsed, fallbackName) {
 
   // マスタ外チェック
   const invalidTags = new Set();
+  const autosuggestTags = new Set();
   for (const k of keys) {
     for (const t of tagsObj[k]) {
-      if (!ALL_MASTER_TAGS.has(t)) invalidTags.add(t);
+      if (isAutosuggestTagAllowed(t)) autosuggestTags.add(t);
+      else if (!ALL_MASTER_TAGS.has(t)) invalidTags.add(t);
     }
   }
 
@@ -3084,7 +3296,16 @@ function applyImportedJson(parsed, fallbackName) {
   state.importedAt = new Date().toISOString();
   saveState();
 
-  return { success: true, keyCount: keys.length, invalidCount: invalidTags.size, invalidTags: Array.from(invalidTags), dupCount: duplicates.length, duplicates: duplicates };
+  return {
+    success: true,
+    keyCount: keys.length,
+    invalidCount: invalidTags.size,
+    invalidTags: Array.from(invalidTags),
+    autosuggestCount: autosuggestTags.size,
+    autosuggestTags: Array.from(autosuggestTags),
+    dupCount: duplicates.length,
+    duplicates: duplicates
+  };
 }
 
 // 単体画像ファイル群を stickerImages に追加（ファイル名から番号抽出）
@@ -3216,6 +3437,8 @@ function formatDate(iso) {
 (async () => {
   setThumbBg(thumbBg);
   setThumbSize(fullThumbSize);
+  await loadOfficialTags();
+  await loadAutosuggestTags();
   await restoreImagesFromDB(); // 保存済み画像を復元
   render();
 })();
