@@ -1488,7 +1488,25 @@ rebuildAllMasterTags();
 // 同階層または assets/ に tags_sticker_autosuggest_only.json があれば起動時に追加読み込みする。
 const AUTOSUGGEST_TAG_MASTER = {
   "オートサジェスト": [
-    "嬉しい"
+    "嬉しい",
+    "うらやましい",
+    "愛してる",
+    "甘える",
+    "むぅ",
+    "おめでとう",
+    "おーい",
+    "こらー",
+    "チェッ",
+    "大丈夫",
+    "ピンチ",
+    "仕事中",
+    "任せた",
+    "休み",
+    "出かける",
+    "お正月",
+    "謹賀新年",
+    "ネズミ",
+    "鮭"
   ]
 };
 
@@ -1554,6 +1572,10 @@ function parseTagJsonToCategoryMap(json) {
 
 function collectTagsFromJson(value, out = new Set()) {
   if (!value) return out;
+  if (typeof value === 'string') {
+    out.add(value);
+    return out;
+  }
   if (Array.isArray(value)) {
     value.forEach(v => {
       if (typeof v === 'string') out.add(v);
@@ -1562,6 +1584,7 @@ function collectTagsFromJson(value, out = new Set()) {
     return out;
   }
   if (typeof value === 'object') {
+    if (typeof value.tag === 'string') out.add(value.tag);
     if (Array.isArray(value.tags)) collectTagsFromJson(value.tags, out);
     if (value.categories && typeof value.categories === 'object') collectTagsFromJson(value.categories, out);
     Object.values(value).forEach(v => collectTagsFromJson(v, out));
