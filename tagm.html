@@ -690,7 +690,11 @@
   <header class="mb-8 flex items-end justify-between flex-wrap gap-4">
     <div>
       <h1 class="display-font text-4xl tracking-tight mt-1" style="color: #2d4a25;">LINEスタンプ・絵文字 タグマネージャー</h1>
-      <p class="text-sm mt-1" style="color: #6b8060;">LINEスタンプと絵文字のタグ付け・確認ツール</p>
+      <p class="text-sm mt-1" style="color: #6b8060;">
+        LINEスタンプと絵文字のタグ付け・確認ツール
+        <span class="mx-2" style="color:#a9c79a;">/</span>
+        <a href="https://yayoi333.github.io/linewl/" style="color:#2f8f62; text-decoration: underline; text-decoration-color:#8fcf9f; text-underline-offset:3px;">スタンプわーくラボ</a>
+      </p>
     </div>
     <!-- ボタン群：3グループ縦並び -->
     <div class="flex flex-col gap-2 items-start">
@@ -777,7 +781,7 @@
   <footer class="mt-10 text-center text-xs" style="color: #8ba07d;">
     タグデータ・画像データはブラウザに自動保存（IndexedDB）
     <br>
-    タグマスタ <span id="tag-master-date">20260520</span>
+    タグマスタ <span id="tag-master-date">20260605</span>
     <div style="margin-top: 28px; font-size: 10px; color: #c8dfc0; letter-spacing: 0.08em; font-family: 'Zen Kaku Gothic New', sans-serif;">
       Developed by yayoi 2026
     </div>
@@ -1484,6 +1488,14 @@ function rebuildAllMasterTags() {
 
 rebuildAllMasterTags();
 
+function formatTagMasterDate(json) {
+  const raw = json && (json.last_updated || json.date || json.updatedAt || json.version);
+  if (!raw) return 'latest';
+  const digits = String(raw).match(/\d/g);
+  if (!digits || digits.length < 8) return String(raw);
+  return digits.slice(0, 8).join('');
+}
+
 // 公開タグにはないが、スタンプ申請画面のオートサジェストで出るタグ。
 // 同階層または assets/ に tags_sticker_autosuggest_only.json があれば起動時に追加読み込みする。
 const AUTOSUGGEST_TAG_MASTER = {
@@ -1604,7 +1616,7 @@ async function loadOfficialTags() {
       if (Object.keys(nextMaster).length === 0) continue;
       TAG_MASTER = nextMaster;
       rebuildAllMasterTags();
-      const label = json.date || json.updatedAt || json.version || 'latest';
+      const label = formatTagMasterDate(json);
       const dateEl = document.getElementById('tag-master-date');
       if (dateEl) dateEl.textContent = String(label);
       break;
