@@ -3075,9 +3075,23 @@ async function exportPNG() {
     const rect = target.getBoundingClientRect();
     const width = Math.ceil(Math.max(target.scrollWidth, target.offsetWidth, rect.width));
     const height = Math.ceil(Math.max(target.scrollHeight, target.offsetHeight, rect.height)) + 24;
+
+    // モバイル（特にiOS Safari）はcanvasの最大サイズ・面積に制限があり、
+    // scale:2のままだと縦長の一覧で上限を超え、途中までしか描画されない。
+    // 制限内に収まるようscaleを動的に下げ、全体が必ず1枚に収まるようにする。
+    const MAX_CANVAS_DIM = 8192;       // 1辺の最大px（保守的な安全値）
+    const MAX_CANVAS_AREA = 16777216;  // 面積の最大px²（iOS Safariの制限）
+    let scale = Math.min(
+      2,
+      MAX_CANVAS_DIM / width,
+      MAX_CANVAS_DIM / height,
+      Math.sqrt(MAX_CANVAS_AREA / (width * height))
+    );
+    if (!isFinite(scale) || scale <= 0) scale = 1;
+
     const canvas = await html2canvas(target, {
       backgroundColor: '#f4faf0',
-      scale: 2,
+      scale: scale,
       useCORS: true,
       imageTimeout: 0,
       scrollX: 0,
