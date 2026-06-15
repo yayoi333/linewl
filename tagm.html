@@ -1,0 +1,3496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
+<meta name="googlebot" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
+<meta name="bingbot" content="noindex,nofollow,noarchive,noimageindex,nosnippet">
+<meta name="AI" content="noai,noimageai">
+<meta name="referrer" content="no-referrer">
+<title>タグマネージャー</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/favicon.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background-color: #f4faf0;
+    color: #2d3d28;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(123, 184, 111, 0.10) 0%, transparent 50%),
+      radial-gradient(circle at 80% 90%, rgba(95, 168, 86, 0.08) 0%, transparent 50%);
+    min-height: 100vh;
+  }
+  .display-font { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 700; }
+  .num-font { font-family: 'Crimson Pro', serif; }
+
+  .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 13px;
+    background: #e6f1de;
+    border: 1px solid #c8dfc0;
+    color: #3a4d33;
+    line-height: 1.4;
+    transition: all 0.15s;
+  }
+  .tag-chip:hover { background: #d8e9cb; }
+  .tag-chip.must {
+    background: #d4e8c5;
+    border-color: #a9c79a;
+    color: #2d4a25;
+    font-weight: 500;
+  }
+  .tag-chip.invalid {
+    background: #f5e0d8;
+    border-color: #d4a08a;
+    color: #8b4a30;
+  }
+  .tag-chip.invalid::before {
+    content: '⚠';
+    font-size: 11px;
+    margin-right: 2px;
+  }
+  .tag-chip.autosuggest {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+  .tag-chip.autosuggest::before {
+    content: '';
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 0;
+  }
+  /* 10個目以降のタグ（オーバー） — 紫系でマスタ外（茶系）と区別 */
+  .tag-chip.over-limit {
+    background: #ede0f5;
+    border-color: #b89ad4;
+    color: #5a3d8b;
+  }
+
+  /* タグカウンタ */
+  .tag-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #e6f1de;
+    border: 1px solid #c8dfc0;
+    color: #3a4d33;
+    font-family: 'Crimson Pro', serif;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+  .tag-counter.over {
+    background: #ede0f5;
+    border-color: #b89ad4;
+    color: #5a3d8b;
+  }
+  .tag-counter.empty {
+    background: #f0f7ec;
+    color: #8ba07d;
+  }
+  .tag-chip button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #6b8060;
+    padding: 0 0 0 2px;
+    line-height: 1;
+    font-size: 15px;
+  }
+  .tag-chip button:hover { color: #a04040; }
+
+  .sticker-row {
+    background: #ffffff;
+    border: 1px solid #d4e6c8;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: border-color 0.15s;
+  }
+  .sticker-row:hover { border-color: #a9c79a; }
+  .sticker-number {
+    font-family: 'Crimson Pro', serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: #5a7250;
+    min-width: 48px;
+    letter-spacing: 0.02em;
+  }
+  .sticker-thumb {
+    width: var(--thumb-size, 72px);
+    height: auto;
+    border-radius: 8px;
+    background: var(--thumb-bg, #e7f1de);
+    border: 1px solid #d4e6c8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition: width 0.1s;
+  }
+  .sticker-thumb img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .sticker-thumb .no-image {
+    width: 100%;
+    height: var(--thumb-size, 72px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #a9c79a;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .btn-primary {
+    background: #5fa856;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-size: 14px;
+    transition: background 0.15s;
+  }
+  .btn-primary:hover { background: #4a8a44; }
+
+  .btn-secondary {
+    background: #ffffff;
+    color: #2d4a25;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid #a9c79a;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { background: #f0f7ec; border-color: #a9c79a; }
+
+  .tag-input {
+    background: transparent;
+    border: 1px dashed #a9c79a;
+    border-radius: 999px;
+    padding: 3px 11px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #3a4d33;
+    width: 100px;
+    outline: none;
+  }
+  .tag-input:focus {
+    border-style: solid;
+    background: white;
+    width: 160px;
+  }
+
+  .tag-picker-wrapper { position: relative; display: inline-block; }
+  .tag-picker-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 50;
+    width: 360px;
+    max-height: 320px;
+    background: white;
+    border: 1px solid #a9c79a;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(30, 60, 30, 0.12);
+    padding: 10px;
+    display: none;
+    overflow: hidden;
+    flex-direction: column;
+  }
+  .tag-picker-popover.open { display: flex; }
+  .category-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dbecd0;
+  }
+  .category-tab {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid #cce0bc;
+    background: #f0f7ec;
+    color: #5a7250;
+  }
+  .category-tab.active {
+    background: #5fa856;
+    color: white;
+    border-color: #5fa856;
+  }
+  .tag-options {
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-content: flex-start;
+  }
+  .tag-option {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid #cce0bc;
+    background: white;
+    color: #3a4d33;
+    font-family: inherit;
+  }
+  .tag-option:hover {
+    background: #e6f1de;
+    border-color: #a9c79a;
+  }
+  .tag-option.selected {
+    background: #cce5bf;
+    border-color: #5fa856;
+    color: #2d4a25;
+  }
+  .tag-option.autosuggest {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+  .tag-option.autosuggest:hover,
+  .tag-option.autosuggest.selected {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1e40af;
+  }
+  .tag-option.custom {
+    background: #fdf2ec;
+    border-color: #d4a08a;
+    color: #8b4a30;
+  }
+  .tag-picker-search {
+    width: 100%;
+    border: 1px solid #cce0bc;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #3a4d33;
+    outline: none;
+    margin-bottom: 8px;
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+  .tag-picker-search:focus { border-color: #5fa856; }
+  .cat-section-header {
+    width: 100%;
+    font-size: 10px;
+    font-weight: 700;
+    color: #5fa856;
+    padding: 5px 2px 3px;
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #dbecd0;
+    flex-shrink: 0;
+  }
+  .cat-section-header:first-child { margin-top: 0; }
+
+  dialog::backdrop {
+    background: rgba(30, 60, 30, 0.4);
+    backdrop-filter: blur(2px);
+  }
+
+  .exporting .tag-input,
+  .exporting .tag-picker-popover,
+  .exporting .tag-chip button { display: none !important; }
+
+  /* Minimal Mode: 画像と番号だけのグリッド */
+  .minimal-grid {
+    --cell-min: 130px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
+    gap: 10px;
+    align-items: start;
+  }
+  .minimal-cell {
+    background: #ffffff;
+    border: 1px solid #d4e6c8;
+    border-radius: 10px;
+    padding: 8px 8px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    transition: border-color 0.15s;
+  }
+  .minimal-cell .number {
+    text-align: center;
+  }
+  .minimal-cell:hover { border-color: #a9c79a; }
+  .minimal-cell.special {
+    background: #f0f7ec;
+    border-color: #5fa856;
+    border-width: 1.5px;
+  }
+  .minimal-cell.special .thumb {
+    background: var(--thumb-bg, #ffffff);
+  }
+  .minimal-cell .thumb {
+    width: 100%;
+    background: var(--thumb-bg, #e7f1de);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 高さは中の画像のアスペクト比で自動決定 */
+  }
+  .minimal-cell .thumb img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .minimal-cell .thumb .no-image {
+    /* 画像がないときは正方形ぽい高さで */
+    width: 100%;
+    padding: 30% 0;
+    font-size: 11px;
+    color: #a9c79a;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .minimal-cell .number {
+    font-family: 'Crimson Pro', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #5a7250;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  /* サイズスライダー（常時表示） */
+  .size-slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    background: white;
+    border: 1px solid #a9c79a;
+    border-radius: 8px;
+    height: 38px;
+  }
+  .size-slider-wrapper label {
+    font-size: 11px;
+    color: #6b8060;
+    letter-spacing: 0.05em;
+  }
+  .size-slider-wrapper input[type=range] {
+    accent-color: #5fa856;
+    width: 100px;
+  }
+  .size-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #e6f1de;
+    border: 1px solid #a9c79a;
+    color: #2d4a25;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+    user-select: none;
+  }
+  .size-btn:hover { background: #d8e9cb; }
+  .size-btn:active { background: #cce5bf; }
+
+  /* =========================================
+     チェック模様背景（透明PNG確認用）
+     ========================================= */
+  body.thumb-checker .sticker-thumb,
+  body.thumb-checker .minimal-cell .thumb {
+    background-image:
+      linear-gradient(45deg, #c0c0c0 25%, transparent 25%),
+      linear-gradient(-45deg, #c0c0c0 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #c0c0c0 75%),
+      linear-gradient(-45deg, transparent 75%, #c0c0c0 75%) !important;
+    background-size: 12px 12px !important;
+    background-position: 0 0, 0 6px, 6px -6px, -6px 0px !important;
+    background-color: #f0f0f0 !important;
+  }
+
+  /* =========================================
+     背景色ピッカー
+     ========================================= */
+  .bg-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 10px;
+    background: white;
+    border: 1px solid #a9c79a;
+    border-radius: 8px;
+    height: 38px;
+  }
+  .bg-picker-row > span {
+    font-size: 11px;
+    color: #6b8060;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    margin-right: 3px;
+  }
+  .bg-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+    outline: none;
+    transition: transform 0.12s;
+  }
+  .bg-swatch:hover { transform: scale(1.18); }
+  .bg-swatch.active {
+    border-color: #5fa856 !important;
+    box-shadow: 0 0 0 1.5px #5fa856;
+  }
+  /* チェック模様スウォッチ */
+  .bg-swatch-checker {
+    background-image:
+      linear-gradient(45deg, #aaa 25%, transparent 25%),
+      linear-gradient(-45deg, #aaa 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #aaa 75%),
+      linear-gradient(-45deg, transparent 75%, #aaa 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+    background-color: #f0f0f0;
+  }
+  /* 読み込みボタン（青系） */
+  .btn-upload {
+    background: #f0f7ff;
+    color: #1a5080;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid #90c0e0;
+    font-size: 13px;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-upload:hover { background: #ddeeff; border-color: #60a0d0; }
+
+  /* タグ付けGPTボタン */
+  .btn-gpt {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #10a37f;
+    color: #ffffff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #0d8a6c;
+    font-size: 13px;
+    transition: all 0.15s;
+    font-family: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn-gpt:hover { background: #0d8a6c; border-color: #0a6f56; }
+
+  /* 書き出しボタン（オレンジ系） */
+  .btn-export {
+    background: #fff8f0;
+    color: #7a4010;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid #d8a870;
+    font-size: 13px;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-export:hover { background: #ffeedd; border-color: #c08050; }
+
+  .btn-info {
+    background: #ff8a1f;
+    color: #ffffff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #e26f00;
+    font-size: 13px;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-info:hover { background: #e87307; border-color: #c65f00; }
+
+  .info-field {
+    width: 100%;
+    background: white;
+    border: 1px solid #d4e6c8;
+    border-radius: 8px;
+    padding: 9px 10px;
+    color: #2d3d28;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+  }
+  .info-field:focus {
+    border-color: #5fa856;
+    box-shadow: 0 0 0 2px rgba(95, 168, 86, 0.14);
+  }
+  .info-main-input {
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+    font-family: 'Crimson Pro', serif;
+    font-weight: 600;
+  }
+  .info-main-select {
+    appearance: auto;
+    min-width: 0;
+    background: #fff8f0;
+    border-color: #f0c99b;
+  }
+  .info-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 176px;
+    background: #ffffff;
+    border: 1px solid #d4e6c8;
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .info-preview-cell {
+    aspect-ratio: 1;
+    background: var(--thumb-bg, #e7f1de);
+    border: 1px solid #e3eedb;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .info-preview-cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .info-preview-cell span {
+    color: #a9c79a;
+    font-size: 11px;
+  }
+  .info-stamp-preview {
+    width: min(240px, 70vw);
+    background: var(--thumb-bg, #e7f1de);
+    border: 1px solid #d4e6c8;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+  }
+  .info-stamp-preview img {
+    max-width: 100%;
+    max-height: 260px;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* グループラベル */
+  .btn-group-label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .btn-group-label.blue {
+    color: #2060a0;
+    background: #e8f4ff;
+    border: 1px solid #90c0e0;
+  }
+  .btn-group-label.orange {
+    color: #8a4010;
+    background: #fff0e0;
+    border: 1px solid #d8a870;
+  }
+
+  /* ミニマルモード時は必須タグパネル等を隠す */
+  .display-minimal #must-tags-panel { display: none; }
+  .display-minimal #meta-panel { display: none; }
+
+  /* メタパネル下部のアクションリンク */
+  .meta-action-link {
+    font-size: 12px;
+    color: #5fa856;
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    text-decoration-color: #a9c79a;
+  }
+  .meta-action-link:hover {
+    color: #4a8a44;
+    text-decoration-color: #5fa856;
+  }
+  .meta-action-link.danger {
+    color: #c08070;
+    text-decoration-color: #e0a89a;
+  }
+  .meta-action-link.danger:hover {
+    color: #a05050;
+    text-decoration-color: #c08070;
+  }
+</style>
+</head>
+<body>
+
+<div id="app" class="max-w-5xl mx-auto px-6 py-8">
+
+  <header class="mb-8 flex items-end justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="display-font text-4xl tracking-tight mt-1" style="color: #2d4a25;">LINEスタンプ・絵文字 タグマネージャー</h1>
+      <p class="text-sm mt-1" style="color: #6b8060;">
+        LINEスタンプと絵文字のタグ付け・確認ツール
+        <span class="mx-2" style="color:#a9c79a;">/</span>
+        <a href="https://yayoi333.github.io/linewl/" style="color:#2f8f62; text-decoration: underline; text-decoration-color:#8fcf9f; text-underline-offset:3px;">スタンプわーくラボ</a>
+      </p>
+    </div>
+    <!-- ボタン群：3グループ縦並び -->
+    <div class="flex flex-col gap-2 items-start">
+
+      <!-- グループ1: 表示設定（緑系・既存スタイル） -->
+      <div class="flex gap-2 items-center flex-wrap justify-start">
+        <button id="mode-toggle" onclick="toggleDisplayMode()" class="btn-secondary"></button>
+        <!-- 背景色ピッカー -->
+        <div class="bg-picker-row" id="bg-picker">
+          <span>背景色</span>
+          <button class="bg-swatch bg-swatch-checker" data-value="checker"
+                  onclick="setThumbBg('checker')" title="チェック模様（透明確認用）"></button>
+          <button class="bg-swatch" data-value="#ffffff"
+                  onclick="setThumbBg('#ffffff')"
+                  style="background:#ffffff; box-shadow: inset 0 0 0 1px #bbb;"
+                  title="白"></button>
+          <button class="bg-swatch" data-value="#FF00FF"
+                  onclick="setThumbBg('#FF00FF')"
+                  style="background:#FF00FF;"
+                  title="マゼンタ"></button>
+          <button class="bg-swatch" data-value="#87CEEB"
+                  onclick="setThumbBg('#87CEEB')"
+                  style="background:#87CEEB;"
+                  title="空色（LINE青空）"></button>
+          <button class="bg-swatch" data-value="#111111"
+                  onclick="setThumbBg('#111111')"
+                  style="background:#111111;"
+                  title="黒"></button>
+          <button class="bg-swatch" data-value="#06C755"
+                  onclick="setThumbBg('#06C755')"
+                  style="background:#06C755;"
+                  title="LINE グリーン"></button>
+          <button class="bg-swatch" data-value="#FF8000"
+                  onclick="setThumbBg('#FF8000')"
+                  style="background:#FF8000;"
+                  title="オレンジ"></button>
+        </div>
+        <!-- サイズスライダー -->
+        <div class="size-slider-wrapper" id="size-slider">
+          <label id="size-label" style="white-space:nowrap;">SIZE</label>
+          <button class="size-btn" onclick="adjustSize(-10)" aria-label="小さく">−</button>
+          <input type="range" id="cell-size-range" min="40" max="300" step="4" oninput="handleSizeInput(this.value)">
+          <button class="size-btn" onclick="adjustSize(10)" aria-label="大きく">＋</button>
+          <span id="cell-size-display" style="font-size: 11px; color: #5a7250; min-width: 36px; text-align: right;"></span>
+        </div>
+        <button id="special-toggle-mini" onclick="toggleSpecialImages()" class="btn-secondary" style="display:none;"></button>
+      </div>
+
+      <!-- グループ2: 読み込み（青系） -->
+      <div class="flex gap-1.5 items-center flex-wrap justify-start">
+        <a href="https://chatgpt.com/g/g-6a223c676fd08191915ecf8e563acae8-linesutanhuhui-wen-zi-takufu-ketiyan"
+           target="_blank" rel="noopener noreferrer" class="btn-gpt">タグ付けGPT</a>
+        <span class="btn-group-label blue">読み込み</span>
+        <label class="btn-upload cursor-pointer">
+          ZIP アップロード
+          <input type="file" accept=".zip" onchange="handleZipUpload(event)" class="hidden">
+        </label>
+        <label class="btn-upload cursor-pointer">
+          PNG アップロード
+          <input type="file" accept=".png,.jpg,.jpeg,.gif,.webp" multiple onchange="handlePngUpload(event)" class="hidden">
+        </label>
+        <button onclick="openImport()" class="btn-upload">タグ付けリスト インポート</button>
+      </div>
+
+      <!-- グループ3: 書き出し（オレンジ系） -->
+      <div class="flex gap-1.5 items-center flex-wrap justify-start">
+        <button onclick="openInfo()" class="btn-info">情報</button>
+        <span class="btn-group-label orange">書き出し</span>
+        <button onclick="openJsonPreview()" class="btn-export">タグ付けリスト プレビュー</button>
+        <button onclick="exportJSON()" class="btn-export">タグ付けリスト エクスポート</button>
+        <button onclick="exportZipWithJson()" class="btn-export">ZIP+タグ付けリスト 保存</button>
+        <button onclick="exportPNG()" class="btn-export">スクショ PNG 出力</button>
+      </div>
+
+    </div>
+  </header>
+
+  <main id="capture-target">
+    <section class="mb-5" id="meta-panel"></section>
+    <section class="mb-6" id="must-tags-panel"></section>
+    <div id="stickers-list"></div>
+  </main>
+
+  <footer class="mt-10 text-center text-xs" style="color: #8ba07d;">
+    タグデータ・画像データはブラウザに自動保存（IndexedDB）
+    <br>
+    タグマスタ <span id="tag-master-date">20260605</span>
+    <div style="margin-top: 28px; font-size: 10px; color: #c8dfc0; letter-spacing: 0.08em; font-family: 'Zen Kaku Gothic New', sans-serif;">
+      Developed by yayoi 2026
+    </div>
+  </footer>
+</div>
+
+<dialog id="import-modal" style="border: none; border-radius: 14px; padding: 28px; max-width: 640px; width: 90vw; background: #f4faf0; box-shadow: 0 20px 60px rgba(50,40,25,0.2);">
+  <h2 class="display-font text-2xl mb-2" style="color: #2d4a25;">タグ付けリストをインポート</h2>
+  <p class="text-sm mb-4" style="color: #5a7250;">スタンプ集名を入力し、GPT・Gemini・Skillsで生成したタグ付けリストを読み込みます。</p>
+
+  <label class="block text-xs mb-1 tracking-wider uppercase" style="color: #6b8060;">Collection name</label>
+  <input id="import-name" placeholder="例：harvest春コレ" class="w-full mb-4 px-3 py-2 rounded" style="background:white; font-family:inherit; border: 1px solid #c8dfc0;">
+
+  <div class="flex items-center gap-2 mb-2">
+    <label class="text-xs tracking-wider uppercase" style="color: #6b8060;">タグ付けリスト</label>
+    <label class="cursor-pointer text-xs px-2 py-1 rounded" style="background: #e6f1de; border: 1px solid #a9c79a; color: #2d4a25;">
+      📁 ファイルから読み込む
+      <input type="file" accept=".json,application/json" onchange="loadJsonFile(event)" class="hidden">
+    </label>
+    <span class="text-xs" style="color: #8ba07d;">または下に貼り付け</span>
+  </div>
+  <textarea id="import-text" rows="10" placeholder='{"001": ["NO", "断る", ...], "002": [...]}' class="w-full px-3 py-2 rounded" style="background:white; font-family: 'SF Mono', Consolas, monospace; font-size: 12.5px; border: 1px solid #c8dfc0;"></textarea>
+
+  <div class="flex justify-end gap-2 mt-4">
+    <button onclick="document.getElementById('import-modal').close()" class="btn-secondary">キャンセル</button>
+    <button onclick="performImport()" class="btn-primary">インポート</button>
+  </div>
+</dialog>
+
+<dialog id="info-modal" style="border: none; border-radius: 14px; padding: 0; max-width: 860px; width: 92vw; background: #f4faf0; box-shadow: 0 20px 60px rgba(50,40,25,0.2);">
+  <div style="padding: 24px;">
+    <div class="flex items-start justify-between gap-3 mb-4">
+      <div>
+        <h2 class="display-font text-2xl" style="color: #2d4a25;">スタンプ名・説明文</h2>
+        <p class="text-sm mt-1" style="color: #6b8060;">タイトル、説明文、絵文字のメイン画像番号を編集できます。</p>
+      </div>
+      <button onclick="document.getElementById('info-modal').close()" class="btn-secondary">閉じる</button>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <section class="bg-white border rounded-xl p-4" style="border-color:#d4e6c8;">
+        <div class="text-[10px] uppercase tracking-[0.18em] mb-3" style="color:#a9c79a;">Japanese</div>
+        <label class="block text-xs mb-1" style="color:#6b8060;">タイトル（絵文字名・スタンプ名）</label>
+        <input id="info-ja-title" class="info-field mb-3" maxlength="40" oninput="updateInfoField('jaTitle', this.value)">
+        <label class="block text-xs mb-1" style="color:#6b8060;">説明文コメント</label>
+        <textarea id="info-ja-description" class="info-field" rows="4" maxlength="160" oninput="updateInfoField('jaDescription', this.value)"></textarea>
+      </section>
+
+      <section class="bg-white border rounded-xl p-4" style="border-color:#d4e6c8;">
+        <div class="text-[10px] uppercase tracking-[0.18em] mb-3" style="color:#a9c79a;">English</div>
+        <label class="block text-xs mb-1" style="color:#6b8060;">Title (En)</label>
+        <input id="info-en-title" class="info-field mb-3" maxlength="40" oninput="updateInfoField('enTitle', this.value)">
+        <label class="block text-xs mb-1" style="color:#6b8060;">Description (En)</label>
+        <textarea id="info-en-description" class="info-field" rows="4" maxlength="160" oninput="updateInfoField('enDescription', this.value)"></textarea>
+      </section>
+    </div>
+
+    <section id="info-main-section" class="bg-white border rounded-xl p-4 mt-4" style="border-color:#d4e6c8;">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div style="flex: 1; min-width: 260px;">
+          <div id="info-main-title" class="text-[10px] uppercase tracking-[0.18em] mb-3" style="color:#a9c79a;">メイン画像（4個選択）</div>
+          <div id="info-main-controls" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3"></div>
+          <textarea id="info-payload" class="info-field" rows="3" readonly style="font-family:'SF Mono', Consolas, monospace; font-size:12px;"></textarea>
+        </div>
+        <div>
+          <div id="info-main-preview-title" class="text-xs mb-2" style="color:#6b8060;">メイン画像プレビュー</div>
+          <div id="info-main-preview" class="info-preview-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="copyInfoPayload()" class="btn-export">コピペさん用コピー</button>
+      <button onclick="document.getElementById('info-modal').close()" class="btn-primary">完了</button>
+    </div>
+  </div>
+</dialog>
+
+
+<script>
+// ============================================================
+// LINE 公式タグマスタ
+// ============================================================
+let TAG_MASTER = {
+  "会話 (150)": [
+    "はぁ",
+    "おはよう",
+    "ちーん",
+    "やっほー",
+    "なんと",
+    "承認",
+    "密です",
+    "安心した",
+    "どうしたの？",
+    "かわいい",
+    "そうそう",
+    "うける",
+    "バイバイ",
+    "おかえり",
+    "ただいま",
+    "しまった",
+    "お願いします",
+    "うはうは",
+    "待ってた",
+    "まさか",
+    "ほほう",
+    "それで？",
+    "真面目",
+    "どこ？",
+    "何してる？",
+    "確かに",
+    "暇です",
+    "げっ",
+    "早く",
+    "うーん",
+    "ファイト",
+    "おまたせ",
+    "だめ",
+    "いやいや",
+    "ふむふむ",
+    "いいね",
+    "恐ろしい",
+    "ガンバレ",
+    "承知",
+    "がっかり",
+    "さすが",
+    "大変",
+    "本気",
+    "ワンチャン",
+    "いってらっしゃい",
+    "助かる",
+    "申し訳ない",
+    "終わった？",
+    "はーい",
+    "どんまい",
+    "おいしい",
+    "恥ずかしい",
+    "まったり",
+    "お手数おかけします",
+    "おやすみ",
+    "了解",
+    "感謝",
+    "そんな",
+    "だるい",
+    "本当",
+    "塞ぐ",
+    "違う",
+    "問題ない",
+    "どうしよう",
+    "おお",
+    "お見事",
+    "わかった",
+    "สวัสดี",
+    "じゃあね",
+    "構って",
+    "こんばんは",
+    "面倒",
+    "よろしく",
+    "しっかり",
+    "ごちそうさま",
+    "ねぇねぇ",
+    "素晴らしい",
+    "やるね",
+    "よし",
+    "またね",
+    "まじで？",
+    "わかるわかる",
+    "もちろん",
+    "そっか",
+    "忙しい",
+    "任せろ",
+    "どういたしまして",
+    "何でもない",
+    "やった",
+    "待ってる",
+    "間違いない",
+    "うんうん",
+    "え？",
+    "バカな",
+    "何か？",
+    "はぁ？",
+    "許さない",
+    "そうなの？",
+    "辛い（つらい）",
+    "ありがとう",
+    "じゃーん",
+    "お祝い",
+    "内緒",
+    "あらま",
+    "えー",
+    "きたー",
+    "頑張る",
+    "メシウマ",
+    "OK",
+    "ありえない",
+    "いただきます",
+    "さようなら",
+    "お大事に",
+    "引く",
+    "わからない",
+    "NG",
+    "ごめんなさい",
+    "難しい",
+    "おつかれさま",
+    "ごゆっくり",
+    "まだ？",
+    "眠い",
+    "タピる",
+    "いえいえ",
+    "半端ない",
+    "NO",
+    "안녕",
+    "心配",
+    "嘘",
+    "YES",
+    "えっへん",
+    "なるほど",
+    "ようこそ",
+    "会いたい",
+    "それな",
+    "すごい",
+    "気をつけて",
+    "無理しないで",
+    "いってきます",
+    "元気？",
+    "いいなー",
+    "どうぞ",
+    "偉い",
+    "ちょっと待った",
+    "面白い",
+    "すみません",
+    "終わった",
+    "何故",
+    "こんにちは",
+    "無理"
+  ],
+  "表現 (128)": [
+    "空虚",
+    "遊ぶ",
+    "気合",
+    "怒る",
+    "ゆるい",
+    "だらだら",
+    "イチャイチャ",
+    "エモイ",
+    "わーい",
+    "動揺",
+    "幸せ",
+    "逃走",
+    "ショック",
+    "プププ",
+    "ぺろ",
+    "休憩",
+    "びっくり",
+    "満足",
+    "フフフ",
+    "シュール",
+    "キュン",
+    "抜け殻",
+    "ちゃらい",
+    "のんびり",
+    "じーっ",
+    "もうすぐ着く",
+    "うるうる",
+    "一番",
+    "空腹",
+    "しんみり",
+    "やばい",
+    "テンパる",
+    "唖然",
+    "衝撃",
+    "ある",
+    "オーマイガー",
+    "あぶない",
+    "あわあわ",
+    "賛成",
+    "もやもや",
+    "ひやひや",
+    "ラブラブ",
+    "カチーン",
+    "マッハ",
+    "元気",
+    "べー",
+    "！！",
+    "ルンルン",
+    "満腹",
+    "ドキドキ",
+    "ノリノリ",
+    "ガクブル",
+    "ぷんぷん",
+    "ハート",
+    "カップル",
+    "プレッシャー",
+    "どんより",
+    "キュート",
+    "アホ",
+    "てへ",
+    "土下座",
+    "もぐもぐ",
+    "起きる",
+    "照れる",
+    "腹ペコ",
+    "謙遜",
+    "じゅるり",
+    "チラッ",
+    "寝る",
+    "今いく",
+    "こっそり",
+    "ラッキー",
+    "隠れる",
+    "ツッコミ",
+    "喪失",
+    "きらきら",
+    "えへへ",
+    "萌える",
+    "ない",
+    "廃人",
+    "ぽかーん",
+    "応援",
+    "爆発",
+    "幸運",
+    "ぐすん",
+    "バテる",
+    "わいわい",
+    "？",
+    "もじもじ",
+    "馬鹿",
+    "うきうき",
+    "しんどい",
+    "おろおろ",
+    "謝る",
+    "疲れた",
+    "贈る",
+    "大げさ",
+    "残念",
+    "ひそひそ",
+    "ぎくり",
+    "あくび",
+    "しょんぼり",
+    "ピキピキ",
+    "復活",
+    "ハハハ",
+    "パクパク",
+    "ふらふら",
+    "目が覚める",
+    "そわそわ",
+    "我慢",
+    "ごはん",
+    "ダッシュ",
+    "ワクテカ",
+    "断る",
+    "ぺこり",
+    "！？",
+    "限界",
+    "呆然",
+    "ピース",
+    "緊急",
+    "無念",
+    "しくしく",
+    "よしよし",
+    "ゾクゾク",
+    "ラブリー",
+    "ちくしょー",
+    "キョトン",
+    "すやすや"
+  ],
+  "感情 (59)": [
+    "感激",
+    "必死",
+    "驚く",
+    "気まずい",
+    "へこむ",
+    "泣く",
+    "ときめく",
+    "あちゃー",
+    "がーん",
+    "興奮",
+    "悔しい",
+    "期待",
+    "不満",
+    "素敵",
+    "どや",
+    "涙",
+    "イエイ",
+    "安心",
+    "焦る",
+    "寂しい",
+    "後悔",
+    "ぼーっとする",
+    "怖い",
+    "一生懸命",
+    "落ちこむ",
+    "悲しい",
+    "かっこいい",
+    "わくわく",
+    "号泣",
+    "呆れる",
+    "ジェラシー",
+    "えーん",
+    "楽しい",
+    "むかつく",
+    "パニック",
+    "暑い",
+    "にやにや",
+    "不機嫌",
+    "最高",
+    "いらいら",
+    "キレる",
+    "不安",
+    "冷静",
+    "吹く",
+    "ぴえん",
+    "ひゃっほー",
+    "とほほ",
+    "しらける",
+    "にっこり",
+    "和む",
+    "震える",
+    "寒い",
+    "笑う",
+    "憂鬱",
+    "腹が立つ",
+    "好き",
+    "弱った",
+    "困る",
+    "やれやれ"
+  ],
+  "行動 (40)": [
+    "悩む",
+    "威張る",
+    "考える",
+    "お使い",
+    "買い物",
+    "誤爆",
+    "落ち着いて",
+    "あたふた",
+    "掃除",
+    "覗く",
+    "頼む",
+    "爆笑",
+    "脅迫",
+    "勉強中",
+    "慌てる",
+    "急ぐ",
+    "飲む",
+    "ぐったり",
+    "参る",
+    "うろうろ",
+    "到着",
+    "浮かれる",
+    "はしゃぐ",
+    "食べる",
+    "反省",
+    "惚れる",
+    "走る",
+    "却下",
+    "お風呂",
+    "爆睡",
+    "くすくす",
+    "退勤",
+    "食事",
+    "慰める",
+    "バンザイ",
+    "拍手",
+    "出勤",
+    "拒否",
+    "今帰る",
+    "料理"
+  ],
+  "春 (20)": [
+    "春",
+    "いちご",
+    "こいのぼり",
+    "ゴールデンウィーク",
+    "エイプリルフール",
+    "入学",
+    "卒業",
+    "春休み",
+    "ひな祭り",
+    "花粉症",
+    "花見",
+    "チューリップ",
+    "桜",
+    "春酒",
+    "228",
+    "婦女節",
+    "青年節",
+    "清明節",
+    "兒童節",
+    "枇杷"
+  ],
+  "夏 (43)": [
+    "夏",
+    "猛暑",
+    "ムシムシ",
+    "日焼け",
+    "夏バテ",
+    "熱中症",
+    "汗",
+    "水分補給",
+    "クーラー",
+    "扇風機",
+    "うちわ",
+    "風鈴",
+    "花火",
+    "夏祭り",
+    "盆踊り",
+    "浴衣",
+    "レジャー",
+    "夏フェス",
+    "プール",
+    "海",
+    "泳ぐ",
+    "水着",
+    "キャンプ",
+    "バーベキュー",
+    "ビアガーデン",
+    "虫刺され",
+    "流しそうめん",
+    "スイカ",
+    "かき氷",
+    "アイスクリーム",
+    "ビール",
+    "ひまわり",
+    "台風",
+    "雷",
+    "ゲリラ豪雨",
+    "お盆",
+    "帰省",
+    "暑中見舞い",
+    "夏休み",
+    "夏休みの宿題",
+    "自由研究",
+    "夏期講習",
+    "高校野球"
+  ],
+  "秋 (23)": [
+    "秋",
+    "トリックオアトリート",
+    "仮装",
+    "コウモリ",
+    "ミイラ",
+    "魔女",
+    "おばけ",
+    "カボチャ",
+    "ハロウィン",
+    "七五三",
+    "松茸",
+    "さんま",
+    "柿",
+    "梨",
+    "ぶどう",
+    "焼きいも",
+    "栗",
+    "お月見",
+    "どんぐり",
+    "落ち葉",
+    "イチョウ",
+    "紅葉狩り",
+    "紅葉"
+  ],
+  "冬 (21)": [
+    "冬",
+    "冬休み",
+    "ポインセチア",
+    "クリスマスリース",
+    "クリスマスプレゼント",
+    "クリスマスケーキ",
+    "クリスマスツリー",
+    "クリスマスパーティー",
+    "サンタクロース",
+    "クリスマス",
+    "雪だるま",
+    "そり",
+    "スケート",
+    "スノーボード",
+    "スキー",
+    "雪",
+    "鍋",
+    "みかん",
+    "手袋",
+    "マフラー",
+    "こたつ"
+  ],
+  "年末年始 (27)": [
+    "年末年始",
+    "除夜の鐘",
+    "カウントダウン",
+    "帰省中です",
+    "昨年は大変お世話になりました",
+    "よいお年を",
+    "大晦日",
+    "年越し",
+    "今年もよろしく（ことよろ）",
+    "正月太り",
+    "おせち",
+    "お年玉",
+    "初夢",
+    "初日の出",
+    "年賀状",
+    "抱負",
+    "おみくじ",
+    "初詣",
+    "元旦",
+    "賀正",
+    "あけましておめでとう",
+    "うま年",
+    "2026",
+    "รดน้ำดำหัว",
+    "สงกรานต์",
+    "สาดน้ำ",
+    "สวัสดีปีใหม่ไทย"
+  ],
+  "動物 (24)": [
+    "イルカ",
+    "ペンギン",
+    "カワウソ",
+    "アザラシ",
+    "ゴリラ",
+    "サル",
+    "トラ",
+    "ライオン",
+    "ゾウ",
+    "キリン",
+    "パンダ",
+    "コアラ",
+    "クマ",
+    "ブタ",
+    "アルパカ",
+    "ヒツジ",
+    "ウマ",
+    "ウシ",
+    "トリ",
+    "ハリネズミ",
+    "ハムスター",
+    "ウサギ",
+    "イヌ",
+    "ネコ"
+  ],
+  "その他 (54)": [
+    "สายย่อ",
+    "電話",
+    "sikat",
+    "連絡",
+    "誕生日",
+    "幹嘛",
+    "kacau",
+    "パリピ",
+    "合格",
+    "กราบ",
+    "ไปเล่นตรงโน้น",
+    "意味不明",
+    "狂",
+    "遅刻",
+    "毒舌",
+    "最低",
+    "สาธุ",
+    "100点",
+    "加一",
+    "โลกสวย",
+    "今",
+    "ギャグ",
+    "นกตลอด",
+    "プレゼント",
+    "隨便",
+    "返信不要",
+    "都你的毛",
+    "เผือก",
+    "感人",
+    "貧乏",
+    "既読",
+    "ピクニック",
+    "แม่ก็คือแม่",
+    "既読無視",
+    "sosor",
+    "เอาที่สบายใจ",
+    "キス",
+    "未読",
+    "変顔",
+    "崩潰",
+    "方言",
+    "飲み会",
+    "yaelah",
+    "顔文字",
+    "メモ",
+    "雨",
+    "神",
+    "แบร่",
+    "โอ้พระเจ้า",
+    "คนบ้า",
+    "ハグ",
+    "真顔",
+    "体調不良",
+    "capekdeh"
+  ]
+};
+
+const ALL_MASTER_TAGS = new Set();
+
+function rebuildAllMasterTags() {
+  ALL_MASTER_TAGS.clear();
+  Object.values(TAG_MASTER).forEach(arr => arr.forEach(t => ALL_MASTER_TAGS.add(t)));
+}
+
+rebuildAllMasterTags();
+
+function formatTagMasterDate(json) {
+  const raw = json && (json.last_updated || json.date || json.updatedAt || json.version);
+  if (!raw) return 'latest';
+  const digits = String(raw).match(/\d/g);
+  if (!digits || digits.length < 8) return String(raw);
+  return digits.slice(0, 8).join('');
+}
+
+// 公開タグにはないが、スタンプ申請画面のオートサジェストで出るタグ。
+// 同階層または assets/ に tags_sticker_autosuggest_only.json があれば起動時に追加読み込みする。
+const AUTOSUGGEST_TAG_MASTER = {
+  "オートサジェスト": [
+    "嬉しい",
+    "うらやましい",
+    "愛してる",
+    "甘える",
+    "むぅ",
+    "おめでとう",
+    "おーい",
+    "こらー",
+    "チェッ",
+    "大丈夫",
+    "ピンチ",
+    "仕事中",
+    "任せた",
+    "休み",
+    "出かける",
+    "お正月",
+    "謹賀新年",
+    "ネズミ",
+    "鮭"
+  ]
+};
+
+const AUTOSUGGEST_TAGS = new Set();
+Object.values(AUTOSUGGEST_TAG_MASTER).forEach(arr => arr.forEach(t => AUTOSUGGEST_TAGS.add(t)));
+
+function normalizeCategoryName(name, tags) {
+  const label = String(name || 'タグ').replace(/\s*\(\d+\)$/, '').trim() || 'タグ';
+  return `${label} (${tags.length})`;
+}
+
+function normalizeTagsArray(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter(v => typeof v === 'string').map(v => v.trim()).filter(Boolean))];
+}
+
+function tagsObjectToCategoryMap(obj) {
+  const result = {};
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return result;
+  for (const [name, value] of Object.entries(obj)) {
+    const tags = normalizeTagsArray(value);
+    if (tags.length > 0) result[normalizeCategoryName(name, tags)] = tags;
+  }
+  return result;
+}
+
+function tagsArrayToCategoryMap(arr, fallbackName = 'タグ') {
+  if (!Array.isArray(arr)) return {};
+  const categoryEntries = {};
+  arr.forEach((item, idx) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+    const name = item.name || item.category || item.title || `タグ${idx + 1}`;
+    const tags = normalizeTagsArray(item.tags || item.items || item.values);
+    if (tags.length > 0) categoryEntries[normalizeCategoryName(name, tags)] = tags;
+  });
+  if (Object.keys(categoryEntries).length > 0) return categoryEntries;
+  const tags = normalizeTagsArray(arr);
+  return tags.length > 0 ? { [normalizeCategoryName(fallbackName, tags)]: tags } : {};
+}
+
+function parseTagJsonToCategoryMap(json) {
+  if (!json) return {};
+  if (Array.isArray(json)) return tagsArrayToCategoryMap(json);
+  if (typeof json !== 'object') return {};
+
+  if (json.categories && typeof json.categories === 'object') {
+    const fromCategories = Array.isArray(json.categories)
+      ? tagsArrayToCategoryMap(json.categories)
+      : tagsObjectToCategoryMap(json.categories);
+    if (Object.keys(fromCategories).length > 0) return fromCategories;
+  }
+
+  if (json.tags) {
+    if (Array.isArray(json.tags)) return tagsArrayToCategoryMap(json.tags);
+    if (typeof json.tags === 'object') {
+      const fromTags = tagsObjectToCategoryMap(json.tags);
+      if (Object.keys(fromTags).length > 0) return fromTags;
+    }
+  }
+
+  return tagsObjectToCategoryMap(json);
+}
+
+function collectTagsFromJson(value, out = new Set()) {
+  if (!value) return out;
+  if (typeof value === 'string') {
+    out.add(value);
+    return out;
+  }
+  if (Array.isArray(value)) {
+    value.forEach(v => {
+      if (typeof v === 'string') out.add(v);
+      else collectTagsFromJson(v, out);
+    });
+    return out;
+  }
+  if (typeof value === 'object') {
+    if (typeof value.tag === 'string') out.add(value.tag);
+    if (Array.isArray(value.tags)) collectTagsFromJson(value.tags, out);
+    if (value.categories && typeof value.categories === 'object') collectTagsFromJson(value.categories, out);
+    Object.values(value).forEach(v => collectTagsFromJson(v, out));
+  }
+  return out;
+}
+
+async function loadOfficialTags() {
+  if (location.protocol === 'file:') return;
+  const paths = ['tags_sticker_latest.json', 'assets/tags_sticker_latest.json'];
+  for (const path of paths) {
+    try {
+      const res = await fetch(path, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const json = await res.json();
+      const nextMaster = parseTagJsonToCategoryMap(json);
+      if (Object.keys(nextMaster).length === 0) continue;
+      TAG_MASTER = nextMaster;
+      rebuildAllMasterTags();
+      const label = formatTagMasterDate(json);
+      const dateEl = document.getElementById('tag-master-date');
+      if (dateEl) dateEl.textContent = String(label);
+      break;
+    } catch (e) {
+      console.warn('公開タグJSON読み込み失敗:', path, e);
+    }
+  }
+}
+
+async function loadAutosuggestTags() {
+  if (location.protocol === 'file:') return;
+  const paths = ['tags_sticker_autosuggest_only.json', 'assets/tags_sticker_autosuggest_only.json'];
+  for (const path of paths) {
+    try {
+      const res = await fetch(path, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const json = await res.json();
+      collectTagsFromJson(json).forEach(tag => {
+        if (!ALL_MASTER_TAGS.has(tag)) AUTOSUGGEST_TAGS.add(tag);
+      });
+      break;
+    } catch (e) {
+      console.warn('オートサジェストタグ読み込み失敗:', path, e);
+    }
+  }
+}
+
+function isStickerTagContext() {
+  return !isEmojiInfo();
+}
+
+function isAutosuggestTagAllowed(tag) {
+  return isStickerTagContext() && AUTOSUGGEST_TAGS.has(tag);
+}
+
+function getTagKind(tag) {
+  if (ALL_MASTER_TAGS.has(tag)) return 'official';
+  if (isAutosuggestTagAllowed(tag)) return 'autosuggest';
+  return 'invalid';
+}
+
+function isValidTag(tag) {
+  return getTagKind(tag) !== 'invalid';
+}
+
+function getTagChipMeta(tag, fallbackTitle) {
+  const kind = getTagKind(tag);
+  if (kind === 'autosuggest') {
+    return { classes: ['autosuggest'], title: 'オートサジェストタグ（スタンプ用）' };
+  }
+  if (kind === 'invalid') {
+    return { classes: ['invalid'], title: 'マスタ外タグ' };
+  }
+  return { classes: [], title: fallbackTitle || '公式タグ' };
+}
+
+// ============================================================
+// State
+// ============================================================
+const STORAGE_KEY = 'linesk:tagManager';
+
+let state = loadState() || {
+  version: 2,
+  collectionName: '',
+  importedAt: '',
+  tags: {},
+  userMustTags: [],
+  meta: createEmptyMeta()
+};
+state.meta = normalizeMeta(state.meta);
+
+let stickerImages = {}; // Object URL キャッシュ。キーは normKey 済み（"1", "2", ...）
+let specialImages = {}; // メイン画像・タブ画像など { main: url, tab: url, ... }
+let zipEntries = {};    // 元ZIPの全ファイル { filename: blob, ... }
+let originalZipName = '';
+let displayMode = localStorage.getItem('linesk:displayMode') || 'full'; // 'full' | 'minimal'
+let showSpecialImages = localStorage.getItem('linesk:showSpecial') !== 'false'; // デフォルトtrue
+let thumbBg = localStorage.getItem('linesk:thumbBg') || 'checker'; // スタンプ表示背景色
+let fullThumbSize = parseInt(localStorage.getItem('linesk:thumbSize'), 10) || 72; // フルモードのサムネサイズ
+
+// ============================================================
+// IndexedDB — 画像の永続保存
+// ============================================================
+const IDB_NAME = 'linesk-images';
+const IDB_VER  = 1;
+const IDB_STORE = 'images';
+
+function _openImageDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function idbPut(key, blob) {
+  try {
+    const db = await _openImageDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(blob, key);
+      tx.oncomplete = resolve;
+      tx.onerror = e => reject(e.target.error);
+    });
+  } catch (e) { console.warn('IDB保存失敗:', e); }
+}
+
+async function idbGetAll() {
+  try {
+    const db = await _openImageDB();
+    return new Promise((resolve, reject) => {
+      const result = {};
+      const req = db.transaction(IDB_STORE, 'readonly')
+                    .objectStore(IDB_STORE).openCursor();
+      req.onsuccess = e => {
+        const cur = e.target.result;
+        if (cur) { result[cur.key] = cur.value; cur.continue(); }
+        else resolve(result);
+      };
+      req.onerror = e => reject(e.target.error);
+    });
+  } catch (e) { console.warn('IDB読み込み失敗:', e); return {}; }
+}
+
+async function idbDelete(key) {
+  try {
+    const db = await _openImageDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = resolve;
+      tx.onerror = e => reject(e.target.error);
+    });
+  } catch (e) { console.warn('IDB削除失敗:', e); }
+}
+
+async function idbClear() {
+  try {
+    const db = await _openImageDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).clear();
+      tx.oncomplete = resolve;
+      tx.onerror = e => reject(e.target.error);
+    });
+  } catch (e) { console.warn('IDBクリア失敗:', e); }
+}
+
+// ページ読み込み時に IDB から画像を復元
+async function restoreImagesFromDB() {
+  const all = await idbGetAll();
+  for (const [key, blob] of Object.entries(all)) {
+    const url = URL.createObjectURL(blob);
+    if (key.startsWith('s:'))      stickerImages[key.slice(2)] = url;
+    else if (key.startsWith('p:')) specialImages[key.slice(2)] = url;
+  }
+}
+
+// 画像を全クリア（IDB + メモリ）
+async function clearAllImages() {
+  const imgCount = Object.keys(stickerImages).length + Object.keys(specialImages).length;
+  if (imgCount === 0) { alert('クリアする画像がありません。'); return; }
+  if (!confirm(`読み込み済みの画像 ${imgCount} 枚をすべてクリアします。\n（タグデータは維持されます）`)) return;
+  Object.values(stickerImages).forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
+  Object.values(specialImages).forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
+  stickerImages = {};
+  specialImages = {};
+  zipEntries = {};
+  originalZipName = '';
+  await idbClear();
+  render();
+}
+
+// ============================================================
+// Key Normalization
+// 「01」「001」「1」をすべて「1」に統一して照合する
+// ============================================================
+function normKey(k) {
+  const n = parseInt(k, 10);
+  if (isNaN(n)) return String(k);
+  return String(n);
+}
+
+// 表示用パディング：全キーの最大値から桁数を自動決定
+function getDisplayDigits(keys) {
+  if (keys.length === 0) return 2;
+  const nums = keys.map(k => parseInt(k, 10)).filter(n => !isNaN(n));
+  if (nums.length === 0) return 2;
+  const maxNum = Math.max(...nums);
+  return Math.max(2, String(maxNum).length);
+}
+
+function displayKey(k, digits) {
+  const n = parseInt(k, 10);
+  if (isNaN(n)) return k; // 数字でないキー（ファイル名）はそのまま返す
+  return String(n).padStart(digits, '0');
+}
+
+function getStickerImage(no) {
+  return stickerImages[normKey(no)] || null;
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const loaded = JSON.parse(raw);
+    // 既存データのキーをゼロ埋めで再正規化（過去バージョンとの互換性）
+    if (loaded && loaded.tags && typeof loaded.tags === 'object') {
+      const keys = Object.keys(loaded.tags);
+      if (keys.length > 0) {
+        const digits = getDisplayDigits(keys.map(normKey));
+        const renamed = {};
+        keys
+          .map(k => ({ orig: k, num: parseInt(k, 10) || 0 }))
+          .sort((a, b) => a.num - b.num)
+          .forEach(({ orig, num }) => {
+            const newKey = String(num).padStart(digits, '0');
+            renamed[newKey] = loaded.tags[orig];
+          });
+        loaded.tags = renamed;
+      }
+    }
+    return loaded;
+  } catch (e) { return null; }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) { console.error('保存失敗:', e); }
+}
+
+function createEmptyMeta() {
+  return {
+    appName: '',
+    createdAt: '',
+    jaTitle: '',
+    jaDescription: '',
+    enTitle: '',
+    enDescription: '',
+    mainImages: []
+  };
+}
+
+function normalizeMeta(meta) {
+  const base = createEmptyMeta();
+  const src = meta && typeof meta === 'object' ? meta : {};
+  const mainImages = Array.isArray(src.mainImages)
+    ? src.mainImages.slice(0, 4).map(normalizeMainImageNo)
+    : [];
+  while (mainImages.length < 4) mainImages.push('');
+  return {
+    ...base,
+    ...src,
+    mainImages
+  };
+}
+
+function normalizeMainImageNo(value) {
+  const text = String(value || '').replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 65248));
+  const match = text.match(/\d{1,3}/);
+  return match ? match[0].padStart(3, '0') : '';
+}
+
+function parseMetaTxt(text) {
+  const meta = createEmptyMeta();
+  const lines = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  let section = '';
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const sectionMatch = line.match(/^\[(.+?)\]$/);
+    if (sectionMatch) {
+      section = sectionMatch[1].toLowerCase();
+      continue;
+    }
+    const kv = line.match(/^([^:：]+)[:：]\s*(.*)$/);
+    if (!kv) continue;
+    const key = kv[1].trim();
+    const value = kv[2].trim();
+
+    if (/^AppName$/i.test(key)) meta.appName = value;
+    else if (/^CreatedAt$/i.test(key)) meta.createdAt = value;
+    else if (section.includes('japanese')) {
+      if (/^Name$/i.test(key)) meta.jaTitle = value;
+      else if (/^Description$/i.test(key)) meta.jaDescription = value;
+    } else if (section.includes('english')) {
+      if (/^Name$/i.test(key)) meta.enTitle = value;
+      else if (/^Description$/i.test(key)) meta.enDescription = value;
+    }
+  }
+
+  const mainSection = String(text || '').match(/\[(?:メイン画像|main images?|main image)\]([\s\S]*?)(?:\n\s*\[|$)/i);
+  if (mainSection) {
+    meta.mainImages = (mainSection[1].match(/[0-9０-９]{1,3}/g) || [])
+      .map(normalizeMainImageNo)
+      .filter(Boolean)
+      .slice(0, 4);
+  }
+  return normalizeMeta(meta);
+}
+
+function buildMetaTxt() {
+  const meta = normalizeMeta(state.meta);
+  const hasMainImages = meta.mainImages.some(Boolean);
+  const appName = meta.appName || (hasMainImages ? '絵文字切り出しくん' : 'スタンプ切り出しくん');
+  const createdAt = meta.createdAt || `${new Date().toISOString().slice(0, 10)} (JST)`;
+  let text =
+    `AppName: ${appName}\n` +
+    `CreatedAt: ${createdAt}\n\n` +
+    `[Japanese]\n` +
+    `Name: ${meta.jaTitle || state.collectionName || ''}\n` +
+    `Description: ${meta.jaDescription || ''}\n\n` +
+    `[English]\n` +
+    `Name: ${meta.enTitle || ''}\n` +
+    `Description: ${meta.enDescription || ''}\n`;
+  if (hasMainImages || /絵文字|emoji/i.test(appName)) {
+    const nums = [0, 1, 2, 3].map(i => meta.mainImages[i] || '').join('     ').trimEnd();
+    text += `\n[メイン画像]\n${nums}\n`;
+  }
+  return text;
+}
+
+function applyMeta(meta) {
+  state.meta = normalizeMeta(meta);
+  if (state.meta.jaTitle) {
+    state.collectionName = state.meta.jaTitle;
+  }
+  saveState();
+}
+
+// ============================================================
+// Render
+// ============================================================
+function render() {
+  // ボディクラスでモード切替
+  document.body.classList.toggle('display-minimal', displayMode === 'minimal');
+  // トグルボタンのラベル
+  const toggleBtn = document.getElementById('mode-toggle');
+  if (toggleBtn) {
+    toggleBtn.textContent = displayMode === 'full' ? '画像のみ表示' : 'タグ表示';
+  }
+  // ミニマル時専用：メイン/タブトグル
+  const specialMini = document.getElementById('special-toggle-mini');
+  if (specialMini) {
+    const hasSpecial = Object.keys(specialImages).length > 0;
+    if (displayMode === 'minimal' && hasSpecial) {
+      specialMini.style.display = '';
+      specialMini.textContent = showSpecialImages ? 'メイン/タブ：表示中' : 'メイン/タブ：非表示';
+      specialMini.style.opacity = showSpecialImages ? '1' : '0.6';
+    } else {
+      specialMini.style.display = 'none';
+    }
+  }
+  renderMeta();
+  renderMustTags();
+  renderStickers();
+  syncSizeSlider();
+}
+
+function toggleDisplayMode() {
+  displayMode = displayMode === 'full' ? 'minimal' : 'full';
+  localStorage.setItem('linesk:displayMode', displayMode);
+  // ミニマル時に開いていたピッカーは閉じる
+  closeTagPicker();
+  render(); // render内でsyncSizeSliderも呼ばれる
+}
+
+function setCellSize(px) {
+  let val = parseInt(px, 10) || 130;
+  val = Math.max(50, Math.min(300, val));
+  const grids = document.querySelectorAll('.minimal-grid');
+  grids.forEach(g => g.style.setProperty('--cell-min', val + 'px'));
+  localStorage.setItem('linesk:cellSize', val);
+  // スライダーとサイズ表示を同期
+  const slider = document.getElementById('cell-size-range');
+  if (slider && parseInt(slider.value, 10) !== val) slider.value = val;
+  const disp = document.getElementById('cell-size-display');
+  if (disp) disp.textContent = val + 'px';
+}
+
+function adjustCellSize(delta) {
+  const current = getSavedCellSize();
+  setCellSize(current + delta);
+}
+
+function getSavedCellSize() {
+  return parseInt(localStorage.getItem('linesk:cellSize'), 10) || 130;
+}
+
+// ============================================================
+// 背景色ピッカー
+// ============================================================
+function setThumbBg(value) {
+  thumbBg = value;
+  localStorage.setItem('linesk:thumbBg', value);
+  // チェック模様：bodyクラスで制御
+  document.body.classList.toggle('thumb-checker', value === 'checker');
+  // 通常カラー：CSS変数で制御
+  if (value !== 'checker') {
+    document.documentElement.style.setProperty('--thumb-bg', value);
+  }
+  // スウォッチのactive状態を更新
+  document.querySelectorAll('.bg-swatch').forEach(el => {
+    el.classList.toggle('active', el.dataset.value === value);
+  });
+}
+
+// ============================================================
+// サイズ変更（フル＆ミニマル共通）
+// ============================================================
+function setThumbSize(px) {
+  fullThumbSize = Math.max(40, Math.min(200, parseInt(px, 10) || 72));
+  document.documentElement.style.setProperty('--thumb-size', fullThumbSize + 'px');
+  localStorage.setItem('linesk:thumbSize', fullThumbSize);
+  const disp = document.getElementById('cell-size-display');
+  if (disp && displayMode === 'full') disp.textContent = fullThumbSize + 'px';
+}
+
+function handleSizeInput(value) {
+  if (displayMode === 'minimal') {
+    setCellSize(value);
+  } else {
+    setThumbSize(value);
+    const slider = document.getElementById('cell-size-range');
+    if (slider) slider.value = fullThumbSize;
+  }
+}
+
+function adjustSize(delta) {
+  if (displayMode === 'minimal') {
+    adjustCellSize(delta);
+  } else {
+    setThumbSize(fullThumbSize + delta);
+    const slider = document.getElementById('cell-size-range');
+    if (slider) slider.value = fullThumbSize;
+  }
+}
+
+function syncSizeSlider() {
+  const slider = document.getElementById('cell-size-range');
+  const disp = document.getElementById('cell-size-display');
+  const label = document.getElementById('size-label');
+  if (!slider) return;
+  if (displayMode === 'minimal') {
+    slider.min = 50;
+    slider.max = 300;
+    slider.step = 5;
+    const cs = getSavedCellSize();
+    slider.value = cs;
+    if (disp) disp.textContent = cs + 'px';
+    if (label) label.textContent = 'セルサイズ';
+  } else {
+    slider.min = 40;
+    slider.max = 200;
+    slider.step = 4;
+    slider.value = fullThumbSize;
+    if (disp) disp.textContent = fullThumbSize + 'px';
+    if (label) label.textContent = 'スタンプ表示サイズ';
+  }
+}
+
+function renderMeta() {
+  const el = document.getElementById('meta-panel');
+  const count = Object.keys(state.tags).length;
+  const imageCount = Object.keys(stickerImages).length;
+  const totalTagCount = Object.values(state.tags).reduce((sum, arr) => sum + arr.length, 0);
+  const displayName = state.collectionName || '(クリックで名前を設定)';
+
+  // アクションリンク（条件付き表示）
+  const canStart = imageCount > 0 && count === 0;
+  const canClear = totalTagCount > 0;
+  const canClearImages = imageCount > 0 || Object.keys(specialImages).length > 0;
+  const hasSpecial = Object.keys(specialImages).length > 0;
+  const actions = [];
+  if (canStart) {
+    actions.push(`<button onclick="startManualTagging()" class="meta-action-link">空テンプレート生成（手動でタグ付け）</button>`);
+  }
+  if (hasSpecial) {
+    const label = showSpecialImages ? 'メイン/タブ画像を非表示' : 'メイン/タブ画像を表示';
+    actions.push(`<button onclick="toggleSpecialImages()" class="meta-action-link">${label}</button>`);
+  }
+  if (canClear) {
+    actions.push(`<button onclick="clearAllTags()" class="meta-action-link danger">タグを一括クリア（${totalTagCount}個）</button>`);
+  }
+  if (canClearImages) {
+    const totalImgs = imageCount + Object.keys(specialImages).length;
+    actions.push(`<button onclick="clearAllImages()" class="meta-action-link danger">画像一括クリア（${totalImgs}枚）</button>`);
+  }
+
+  el.innerHTML = `
+    <div class="bg-white border rounded-xl p-4" style="border-color: #d4e6c8;">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div style="flex: 1; min-width: 200px;">
+          <div class="text-[10px] uppercase tracking-[0.18em] flex items-center gap-2" style="color: #a9c79a;">
+            Collection
+            <span class="text-[10px] normal-case" style="color: #a9c79a; letter-spacing: 0;">（クリックで編集）</span>
+          </div>
+          <div class="display-font text-2xl mt-0.5"
+               contenteditable="true"
+               spellcheck="false"
+               onblur="updateCollectionName(this.textContent)"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+               style="color: ${state.collectionName ? '#2d4a25' : '#a9c79a'}; outline: none; border-bottom: 1px dashed transparent; padding: 2px 4px; border-radius: 4px; min-width: 100px; display: inline-block;"
+               onfocus="this.style.borderBottomColor='#a9c79a'; this.style.background='#f4faf0'; if(!state.collectionName) this.textContent='';"
+               >${escapeHtml(displayName)}</div>
+        </div>
+        <div class="text-sm text-right" style="color: #5a7250;">
+          <div>タグデータ: <span class="font-semibold">${count}</span> 枚 / 画像: <span class="font-semibold">${imageCount}</span> 枚</div>
+          ${state.importedAt ? `<div class="text-xs mt-1" style="color:#8ba07d;">${formatDate(state.importedAt)} インポート</div>` : ''}
+        </div>
+      </div>
+      <div class="flex items-center justify-between flex-wrap gap-2 mt-3 pt-3" style="border-top: 1px dashed #d4e6c8;">
+        <div class="flex gap-3 flex-wrap">
+          ${actions.join('')}
+        </div>
+        <button onclick="resetAll()" class="meta-action-link danger" style="font-size:11px; flex-shrink:0;">全データ削除</button>
+      </div>
+    </div>
+  `;
+}
+
+function clearAllTags() {
+  const totalTagCount = Object.values(state.tags).reduce((sum, arr) => sum + arr.length, 0);
+  if (totalTagCount === 0) {
+    alert('クリアするタグがありません。');
+    return;
+  }
+  const keyCount = Object.keys(state.tags).length;
+  if (!confirm(`${keyCount} 枚分のタグ（合計 ${totalTagCount} 個）を全削除します。\n\nよろしいですか？`)) return;
+  for (const k of Object.keys(state.tags)) {
+    state.tags[k] = [];
+  }
+  saveState();
+  render();
+}
+
+function toggleSpecialImages() {
+  showSpecialImages = !showSpecialImages;
+  localStorage.setItem('linesk:showSpecial', String(showSpecialImages));
+  render();
+}
+
+function updateCollectionName(value) {
+  const trimmed = (value || '').trim();
+  // プレースホルダーをそのままblurした場合は変更しない
+  if (trimmed === '(クリックで名前を設定)' || trimmed === '') {
+    render();
+    return;
+  }
+  state.collectionName = trimmed;
+  saveState();
+  render();
+}
+
+function openInfo() {
+  state.meta = normalizeMeta(state.meta);
+  const meta = state.meta;
+  document.getElementById('info-ja-title').value = meta.jaTitle || state.collectionName || '';
+  document.getElementById('info-ja-description').value = meta.jaDescription || '';
+  document.getElementById('info-en-title').value = meta.enTitle || '';
+  document.getElementById('info-en-description').value = meta.enDescription || '';
+  renderInfoMainControls();
+  renderInfoPayload();
+  document.getElementById('info-modal').showModal();
+}
+
+function updateInfoField(field, value) {
+  state.meta = normalizeMeta(state.meta);
+  state.meta[field] = String(value || '').trim();
+  if (field === 'jaTitle' && state.meta[field]) {
+    state.collectionName = state.meta[field];
+  }
+  saveState();
+  renderInfoPayload();
+  renderMeta();
+}
+
+function updateInfoMainImage(index, value) {
+  state.meta = normalizeMeta(state.meta);
+  const next = [0, 1, 2, 3].map(i => state.meta.mainImages[i] || '');
+  next[index] = normalizeMainImageNo(value);
+  state.meta.mainImages = next;
+  const input = document.getElementById(`info-main-${index}`);
+  if (input) input.value = next[index] || '';
+  saveState();
+  renderInfoPayload();
+}
+
+function isEmojiInfo() {
+  const meta = normalizeMeta(state.meta);
+  return /絵文字|emoji/i.test([meta.appName || '', state.collectionName || ''].join(' ')) || meta.mainImages.some(Boolean);
+}
+
+function getInfoImageKeys() {
+  const keys = new Set(Object.keys(stickerImages || {}));
+  Object.keys(state.tags || {}).forEach(k => {
+    const norm = normKey(k);
+    if (stickerImages[norm]) keys.add(norm);
+  });
+  return Array.from(keys).sort((a, b) => {
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return String(a).localeCompare(String(b), 'ja');
+  });
+}
+
+function renderInfoMainControls() {
+  const title = document.getElementById('info-main-title');
+  const controls = document.getElementById('info-main-controls');
+  if (!controls) return;
+
+  if (!isEmojiInfo()) {
+    if (title) title.textContent = 'スタンプ代表画像';
+    controls.className = 'mb-3';
+    controls.innerHTML = `<p class="text-sm" style="color:#6b8060;">ZIP内の main.png を表示します。</p>`;
+    return;
+  }
+
+  if (title) title.textContent = 'メイン画像（4個選択）';
+  controls.className = 'grid grid-cols-2 md:grid-cols-4 gap-2 mb-3';
+  const meta = normalizeMeta(state.meta);
+  const optionValues = new Set(getInfoImageKeys()
+    .map(k => parseInt(k, 10))
+    .filter(n => !isNaN(n))
+    .map(n => String(n).padStart(3, '0')));
+  meta.mainImages.forEach(no => { if (no) optionValues.add(no); });
+  const options = Array.from(optionValues).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+
+  controls.innerHTML = [0, 1, 2, 3].map(i => {
+    const selected = meta.mainImages[i] || '';
+    const optionHtml = [
+      `<option value="">未選択</option>`,
+      ...options.map(no => {
+        const labelNo = parseInt(no, 10);
+        const label = isNaN(labelNo) ? no : `No.${labelNo}`;
+        return `<option value="${escapeHtml(no)}" ${no === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+      })
+    ].join('');
+    return `<select id="info-main-${i}" class="info-field info-main-select info-main-input" onchange="updateInfoMainImage(${i}, this.value)">${optionHtml}</select>`;
+  }).join('');
+}
+
+function buildInfoPayloadObject() {
+  const meta = normalizeMeta(state.meta);
+  return {
+    enTitle: meta.enTitle || '',
+    enDescription: meta.enDescription || '',
+    jaTitle: meta.jaTitle || state.collectionName || '',
+    jaDescription: meta.jaDescription || '',
+    mainImages: (meta.mainImages || []).filter(Boolean)
+  };
+}
+
+function renderInfoPayload() {
+  const payload = buildInfoPayloadObject();
+  const payloadText = 'LINE_CM_TEXT:' + JSON.stringify(payload);
+  localStorage.setItem('lcmTextPayload', JSON.stringify(payload));
+  const payloadEl = document.getElementById('info-payload');
+  if (payloadEl) payloadEl.value = payloadText;
+  renderInfoMainPreview();
+}
+
+function renderInfoMainPreview() {
+  const el = document.getElementById('info-main-preview');
+  const title = document.getElementById('info-main-preview-title');
+  if (!el) return;
+
+  if (!isEmojiInfo()) {
+    if (title) title.textContent = 'main.png プレビュー';
+    if (specialImages.main) {
+      el.className = 'info-stamp-preview';
+      el.innerHTML = `<img src="${specialImages.main}" alt="main.png">`;
+    } else {
+      el.className = 'info-stamp-preview';
+      el.innerHTML = `<span style="color:#a9c79a;">main.png なし</span>`;
+    }
+    return;
+  }
+
+  if (title) title.textContent = 'メイン画像プレビュー';
+  el.className = 'info-preview-grid';
+  const meta = normalizeMeta(state.meta);
+  const nums = [0, 1, 2, 3].map(i => meta.mainImages[i] || '');
+  el.innerHTML = nums.map(no => {
+    const url = no ? getStickerImage(no) : null;
+    return `<div class="info-preview-cell">${url ? `<img src="${url}" alt="${escapeHtml(no)}">` : `<span>${escapeHtml(no || '-')}</span>`}</div>`;
+  }).join('');
+}
+
+async function copyInfoPayload() {
+  renderInfoPayload();
+  const text = document.getElementById('info-payload').value;
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('コピペ用データをコピーしました。');
+  } catch (e) {
+    const el = document.getElementById('info-payload');
+    el.focus();
+    el.select();
+    document.execCommand('copy');
+    alert('コピペ用データを選択しました。コピーできない場合は手動でコピーしてください。');
+  }
+}
+
+function renderMustTags() {
+  const el = document.getElementById('must-tags-panel');
+  const chips = state.userMustTags.map((tag, i) => {
+    const meta = getTagChipMeta(tag, '公式タグ');
+    return `
+      <span class="tag-chip must ${meta.classes.join(' ')}" title="${meta.title}">
+        ${escapeHtml(tag)}
+        <button onclick="removeMustTag(${i})" aria-label="削除">×</button>
+      </span>
+    `;
+  }).join('');
+  el.innerHTML = `
+    <div class="bg-white border rounded-xl p-4" style="border-color: #d4e6c8;">
+      <div class="flex items-baseline gap-2 mb-3">
+        <div class="text-[10px] uppercase tracking-[0.18em]" style="color: #a9c79a;">Must-Have Tags</div>
+        <div class="text-xs" style="color: #8ba07d;">全スタンプに自動付与</div>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        ${chips || '<span class="text-xs" style="color:#a9c79a;">必須タグはまだありません</span>'}
+        <span class="tag-picker-wrapper">
+          <input class="tag-input" placeholder="+ 追加"
+                 onfocus="openTagPicker(this, 'must')"
+                 oninput="filterTagPicker(this.value)"
+                 onkeydown="handleTagInputKey(event, 'must')">
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+function renderStickers() {
+  const el = document.getElementById('stickers-list');
+  const tagKeys = Object.keys(state.tags);
+  const imageKeys = Object.keys(stickerImages);
+
+  // タグも画像も無い場合
+  if (tagKeys.length === 0 && imageKeys.length === 0) {
+    el.innerHTML = `
+      <div class="text-center py-20 bg-white border border-dashed rounded-xl" style="border-color: #c8dfc0;">
+        <p style="color: #6b8060;">データがありません。</p>
+        <p class="text-sm mt-2" style="color: #8ba07d;">「タグ付けリスト インポート」または「画像ZIPアップロード」から始められます。</p>
+      </div>
+    `;
+    return;
+  }
+
+  // ミニマルモード：画像とタグのキーをunion（タグだけ・画像だけのどちらでもOK）
+  if (displayMode === 'minimal') {
+    const unionSet = new Set([...tagKeys.map(normKey), ...imageKeys]);
+    const sortedKeys = Array.from(unionSet).sort((a, b) => {
+      const na = parseInt(a, 10), nb = parseInt(b, 10);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      if (!isNaN(na)) return -1; // 数値キーを先に
+      if (!isNaN(nb)) return 1;
+      return a.localeCompare(b); // 両方非数値はアルファベット順
+    });
+    const digits = getDisplayDigits(sortedKeys);
+    const cellSize = getSavedCellSize();
+
+    // 特殊画像（メイン・タブ）セル（トグルでオフ可能）
+    const SPECIAL_LABELS = { main: 'MAIN', tab: 'TAB', stab: 'STAB', key: 'KEY' };
+    const specialCells = !showSpecialImages ? '' : ['main', 'tab', 'stab', 'key']
+      .filter(k => specialImages[k])
+      .map(k => `
+        <div class="minimal-cell special">
+          <div class="thumb"><img src="${specialImages[k]}" alt="${k}"></div>
+          <div class="number" style="font-family:'Zen Kaku Gothic New', sans-serif; font-size: 13px; color: #5fa856; letter-spacing: 0.05em;">${SPECIAL_LABELS[k]}</div>
+        </div>
+      `).join('');
+
+    const stickerCells = sortedKeys.map(normalized => {
+      const imgUrl = stickerImages[normalized];
+      const thumb = imgUrl
+        ? `<img src="${imgUrl}" alt="${normalized}">`
+        : `<div class="no-image">no<br>image</div>`;
+      return `
+        <div class="minimal-cell">
+          <div class="thumb">${thumb}</div>
+          <div class="number">${escapeHtml(displayKey(normalized, digits))}</div>
+        </div>
+      `;
+    }).join('');
+
+    el.innerHTML = `<div class="minimal-grid" style="--cell-min: ${cellSize}px;">${specialCells}${stickerCells}</div>`;
+
+    // スライダー＆表示値を同期
+    setCellSize(cellSize);
+    return;
+  }
+
+  // フルモード：タグ編集用、state.tagsのキーをループ。元のキー形式は保持
+  // フルモード（タグ表示）：画像のキーとタグのキーをunion
+  // 画像があってタグがないスタンプも全部表示
+  if (tagKeys.length === 0 && imageKeys.length === 0) {
+    el.innerHTML = `
+      <div class="text-center py-12 bg-white border border-dashed rounded-xl" style="border-color: #c8dfc0;">
+        <p style="color: #6b8060;">タグデータがありません。</p>
+        <p class="text-sm mt-2" style="color: #8ba07d;">「タグ付けリスト インポート」または「画像アップロード」から始めてください。</p>
+      </div>
+    `;
+    return;
+  }
+
+  // タグキーを normKey で索引化（表示キー <-> 正規化キー の往復に使う）
+  const tagsByNorm = {};
+  for (const k of tagKeys) {
+    tagsByNorm[normKey(k)] = { origKey: k, tags: state.tags[k] || [] };
+  }
+
+  // 画像数 vs タグ数の不一致を吸収するため、unionで全キーを生成
+  const unionSet = new Set([...tagKeys.map(normKey), ...imageKeys]);
+  const sortedNorm = Array.from(unionSet).sort((a, b) => {
+      const na = parseInt(a, 10), nb = parseInt(b, 10);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      if (!isNaN(na)) return -1; // 数値キーを先に
+      if (!isNaN(nb)) return 1;
+      return a.localeCompare(b); // 両方非数値はアルファベット順
+    });
+  const digits = getDisplayDigits(sortedNorm);
+
+  // メイン/タブ画像のセル（フルモードでも表示。トグルでオフ可能）
+  const SPECIAL_LABELS = { main: 'MAIN', tab: 'TAB', stab: 'STAB', key: 'KEY' };
+  const specialRows = !showSpecialImages ? '' : ['main', 'tab', 'stab', 'key']
+    .filter(k => specialImages[k])
+    .map(k => `
+      <div class="sticker-row flex items-center gap-4" style="background: #f0f7ec; border-color: #5fa856; border-width: 1.5px;">
+        <div class="sticker-thumb"><img src="${specialImages[k]}" alt="${k}"></div>
+        <div class="flex flex-col items-center" style="min-width: 48px;">
+          <div style="font-family:'Zen Kaku Gothic New', sans-serif; font-size: 15px; font-weight: 700; color: #5fa856; letter-spacing: 0.05em;">${SPECIAL_LABELS[k]}</div>
+        </div>
+        <div class="flex-1 text-sm" style="color: #6b8060;">
+          ${k === 'main' ? 'スタンプ集の代表画像' : k === 'tab' ? 'トークルームのタブアイコン' : k === 'stab' ? 'タブの選択時アイコン' : 'キービジュアル'}（タグ付け対象外）
+        </div>
+      </div>
+    `).join('');
+
+  const TAG_LIMIT = 9;
+  const stickerRows = sortedNorm.map(norm => {
+    const entry = tagsByNorm[norm];
+    // 表示用キー：JSON既存のキーがあればそれを使う、なければゼロ埋め新規生成
+    const displayNo = entry ? entry.origKey : displayKey(norm, digits);
+    const tags = entry ? entry.tags : [];
+    const imgUrl = stickerImages[norm];
+    const thumb = imgUrl
+      ? `<img src="${imgUrl}" alt="${displayNo}">`
+      : `<div class="no-image">no<br>image</div>`;
+
+    const totalCount = tags.length + state.userMustTags.length;
+    let counterClass = 'tag-counter';
+    if (totalCount === 0) counterClass += ' empty';
+    else if (totalCount > TAG_LIMIT) counterClass += ' over';
+    const counterIcon = totalCount > TAG_LIMIT ? '⚠ ' : '';
+
+    return `
+      <div class="sticker-row flex items-start gap-4">
+        <div class="sticker-thumb">${thumb}</div>
+        <div class="flex flex-col items-center self-center gap-1.5" style="min-width: 48px;">
+          <div class="sticker-number" style="margin:0;">${escapeHtml(displayNo)}</div>
+          <span class="${counterClass}" title="現在のタグ数 / 上限 ${TAG_LIMIT}">${counterIcon}${totalCount}/${TAG_LIMIT}</span>
+        </div>
+        <div class="flex-1 flex flex-wrap gap-2 items-center self-center">
+          ${tags.map((t, i) => {
+            const classes = ['tag-chip'];
+            const meta = getTagChipMeta(t, '公式タグ');
+            classes.push(...meta.classes);
+            const globalIdx = i + state.userMustTags.length;
+            if (globalIdx >= TAG_LIMIT) classes.push('over-limit');
+            const title = globalIdx >= TAG_LIMIT ? '上限9個を超えています' : meta.title;
+            return `
+              <span class="${classes.join(' ')}" title="${title}">
+                ${escapeHtml(t)}
+                <button onclick="removeTag('${displayNo}', ${i})" aria-label="削除">×</button>
+              </span>
+            `;
+          }).join('')}
+          ${state.userMustTags.map((t, i) => {
+            const classes = ['tag-chip', 'must'];
+            const meta = getTagChipMeta(t, '必須タグ');
+            classes.push(...meta.classes);
+            if (i >= TAG_LIMIT) classes.push('over-limit');
+            return `
+              <span class="${classes.join(' ')}" title="${meta.title}">
+                ${escapeHtml(t)}
+              </span>
+            `;
+          }).join('')}
+          <span class="tag-picker-wrapper">
+            <input class="tag-input" placeholder="+ タグ" data-no="${displayNo}"
+                   onfocus="openTagPicker(this, 'sticker', '${displayNo}')"
+                   oninput="filterTagPicker(this.value)"
+                   onkeydown="handleTagInputKey(event, 'sticker', '${displayNo}')">
+          </span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  el.innerHTML = specialRows + stickerRows;
+}
+
+// 手動タグ付け開始：画像のキーから空のタグ配列を作成
+function startManualTagging() {
+  const imageKeys = Object.keys(stickerImages);
+  if (imageKeys.length === 0) {
+    alert('画像が読み込まれていません');
+    return;
+  }
+  // 桁数を画像数から決定（2桁または3桁）
+  const digits = getDisplayDigits(imageKeys);
+  const newTags = {};
+  imageKeys
+    .map(k => parseInt(k, 10) || 0)
+    .sort((a, b) => a - b)
+    .forEach(num => {
+      const key = String(num).padStart(digits, '0');
+      newTags[key] = [];
+    });
+  state.tags = newTags;
+  saveState();
+  render();
+}
+
+// ============================================================
+// Tag Picker
+// ============================================================
+let currentPickerInput = null;
+let currentPickerCategory = 'all';
+let currentPickerQuery = '';
+let currentPickerContext = null;
+
+function openTagPicker(inputEl, type, no) {
+  closeTagPicker();
+  currentPickerInput = inputEl;
+  currentPickerContext = { type, no };
+  currentPickerCategory = 'all';
+  currentPickerQuery = '';
+
+  const wrapper = inputEl.parentElement;
+  const popover = document.createElement('div');
+  popover.className = 'tag-picker-popover open';
+  popover.id = 'active-tag-picker';
+  popover.innerHTML = buildPickerHTML();
+  wrapper.appendChild(popover);
+  attachPickerEvents(popover);
+}
+
+// ピッカー全体の枠（検索欄・カテゴリタブ・結果コンテナ）を構築。
+// 検索欄とタブはクエリ変更で作り直さない（IME変換が途切れないようにするため）。
+function buildPickerHTML() {
+  const catKeys = Object.keys(TAG_MASTER);
+  // カテゴリタブ：カッコ内の数字を除いたラベルで表示
+  const tabs = ['all', ...catKeys].map(c => {
+    const label = c === 'all' ? 'すべて' : c.replace(/\s*\(\d+\)$/, '').trim();
+    return `<span class="category-tab" data-cat="${escapeHtml(c)}">${escapeHtml(label)}</span>`;
+  }).join('');
+
+  return `
+    <input class="tag-picker-search" id="tag-picker-search"
+           placeholder="タグを検索..." value="${escapeHtml(currentPickerQuery)}"
+           autocomplete="off"
+           oninput="filterTagPicker(this.value)"
+           onkeydown="if(event.key==='Escape'){closeTagPicker();}">
+    <div class="category-tabs">${tabs}</div>
+    <div class="tag-options" id="tag-options-scroll">${buildPickerOptionsHTML()}</div>
+  `;
+}
+
+// 検索クエリに応じたタグ一覧（カテゴリ別セクション＋カスタム追加）を構築。
+// クエリ変更時はこの部分だけを差し替える。
+function buildPickerOptionsHTML() {
+  const catKeys = Object.keys(TAG_MASTER);
+  const existing = new Set(
+    currentPickerContext.type === 'must'
+      ? state.userMustTags
+      : (state.tags[currentPickerContext.no] || [])
+  );
+  const q = currentPickerQuery ? currentPickerQuery.toLowerCase() : '';
+
+  // 全タグをカテゴリ別セクションで表示（上限なし）
+  let optionsHtml = '';
+  let hasAny = false;
+  catKeys.forEach((cat, idx) => {
+    let tags = TAG_MASTER[cat];
+    if (q) tags = tags.filter(t => t.toLowerCase().includes(q));
+    if (tags.length === 0) return;
+    hasAny = true;
+    const label = cat.replace(/\s*\(\d+\)$/, '').trim();
+    optionsHtml += `<div class="cat-section-header" id="cat-sec-${idx}">${escapeHtml(label)}</div>`;
+    optionsHtml += tags.map(t => {
+      const cls = existing.has(t) ? 'selected' : '';
+      return `<button class="tag-option ${cls}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`;
+    }).join('');
+  });
+
+  if (isStickerTagContext()) {
+    let autosuggestTags = Array.from(AUTOSUGGEST_TAGS).sort((a, b) => a.localeCompare(b, 'ja'));
+    if (q) autosuggestTags = autosuggestTags.filter(t => t.toLowerCase().includes(q));
+    autosuggestTags = autosuggestTags.filter(t => !ALL_MASTER_TAGS.has(t));
+    if (autosuggestTags.length > 0) {
+      hasAny = true;
+      optionsHtml += `<div class="cat-section-header">オートサジェスト</div>`;
+      optionsHtml += autosuggestTags.map(t => {
+        const cls = existing.has(t) ? 'selected autosuggest' : 'autosuggest';
+        return `<button class="tag-option ${cls}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`;
+      }).join('');
+    }
+  }
+
+  if (!hasAny) {
+    optionsHtml = '<span style="font-size:11px; color:#8ba07d; padding:6px;">該当なし</span>';
+  }
+
+  let customSection = '';
+  if (currentPickerQuery && !isValidTag(currentPickerQuery)) {
+    customSection = `
+      <div style="border-top: 1px dashed #cce0bc; padding-top: 6px; margin-top: 6px; width:100%;">
+        <div style="font-size: 10px; color: #8ba07d; margin-bottom: 4px;">マスタ外（カスタム追加）</div>
+        <button class="tag-option custom" data-tag="${escapeHtml(currentPickerQuery)}" data-custom="1">+ ${escapeHtml(currentPickerQuery)}</button>
+      </div>
+    `;
+  }
+
+  return optionsHtml + customSection;
+}
+
+function attachPickerEvents(popover) {
+  const catKeys = Object.keys(TAG_MASTER);
+
+  popover.querySelectorAll('.category-tab').forEach(tab => {
+    tab.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      const cat = tab.dataset.cat;
+      const scrollEl = document.getElementById('tag-options-scroll');
+      if (!scrollEl) return;
+
+      if (cat === 'all') {
+        // 「すべて」→ 先頭へ
+        scrollEl.scrollTop = 0;
+      } else {
+        // カテゴリ → 該当セクションへスクロール
+        const idx = catKeys.indexOf(cat);
+        const section = document.getElementById('cat-sec-' + idx);
+        if (section) {
+          const containerTop = scrollEl.getBoundingClientRect().top;
+          const sectionTop = section.getBoundingClientRect().top;
+          scrollEl.scrollTop += sectionTop - containerTop;
+        }
+      }
+    });
+  });
+
+  attachOptionEvents(popover);
+}
+
+// タグオプションのクリックイベントだけを（再）アタッチする
+function attachOptionEvents(root) {
+  root.querySelectorAll('.tag-option').forEach(opt => {
+    opt.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      const tag = opt.dataset.tag;
+      selectTagFromPicker(tag);
+    });
+  });
+}
+
+function refreshPicker() {
+  const popover = document.getElementById('active-tag-picker');
+  if (!popover) return;
+  const searchWasFocused = document.activeElement?.id === 'tag-picker-search';
+  popover.innerHTML = buildPickerHTML();
+  attachPickerEvents(popover);
+  // 検索欄にフォーカスがあった場合は再フォーカス（カーソル位置を末尾に）
+  if (searchWasFocused) {
+    const s = document.getElementById('tag-picker-search');
+    if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  }
+}
+
+// 検索クエリ変更時：検索欄・タブは触らず、一覧部分だけ差し替える。
+// これにより日本語入力（IME変換中）が途切れない。
+function filterTagPicker(value) {
+  currentPickerQuery = value.trim();
+  const scrollEl = document.getElementById('tag-options-scroll');
+  if (!scrollEl) return;
+  scrollEl.innerHTML = buildPickerOptionsHTML();
+  attachOptionEvents(scrollEl);
+}
+
+function selectTagFromPicker(tag) {
+  if (!currentPickerContext) return;
+  if (currentPickerContext.type === 'must') {
+    addMustTag(tag);
+  } else {
+    addTag(currentPickerContext.no, tag);
+  }
+  if (currentPickerInput) {
+    currentPickerInput.value = '';
+    currentPickerQuery = '';
+  }
+}
+
+function closeTagPicker() {
+  const existing = document.getElementById('active-tag-picker');
+  if (existing) existing.remove();
+  currentPickerInput = null;
+  currentPickerContext = null;
+}
+
+function handleTagInputKey(event, type, no) {
+  if (event.key === 'Enter') {
+    const v = event.target.value.trim();
+    if (!v) return;
+    if (type === 'must') addMustTag(v);
+    else addTag(no, v);
+    event.target.value = '';
+  } else if (event.key === 'Escape') {
+    closeTagPicker();
+    event.target.blur();
+  }
+}
+
+document.addEventListener('pointerdown', e => {
+  const picker = document.getElementById('active-tag-picker');
+  if (!picker) return;
+  if (picker.contains(e.target)) return;
+  if (e.target.classList && e.target.classList.contains('tag-input')) return;
+  closeTagPicker();
+});
+
+// ============================================================
+// Actions
+// ============================================================
+function addTag(no, value) {
+  const v = value.trim();
+  if (!v) return;
+  if (!state.tags[no]) state.tags[no] = [];
+  if (state.tags[no].includes(v)) return;
+  state.tags[no].push(v);
+  saveState();
+  render();
+}
+
+function removeTag(no, idx) {
+  state.tags[no].splice(idx, 1);
+  saveState();
+  render();
+}
+
+function addMustTag(value) {
+  const v = value.trim();
+  if (!v) return;
+  if (state.userMustTags.includes(v)) return;
+  state.userMustTags.push(v);
+  saveState();
+  render();
+}
+
+function removeMustTag(idx) {
+  state.userMustTags.splice(idx, 1);
+  saveState();
+  render();
+}
+
+async function resetAll() {
+  if (!confirm('すべてのデータ（タグ・画像）を完全に削除します。\nよろしいですか？')) return;
+  // タグデータをクリア
+  localStorage.removeItem(STORAGE_KEY);
+  state = {
+    version: 2,
+    collectionName: '',
+    importedAt: '',
+    tags: {},
+    userMustTags: [],
+    meta: createEmptyMeta()
+  };
+  // 画像をメモリからクリア
+  Object.values(stickerImages).forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
+  Object.values(specialImages).forEach(u => { try { URL.revokeObjectURL(u); } catch(e){} });
+  stickerImages = {};
+  specialImages = {};
+  zipEntries = {};
+  originalZipName = '';
+  // IndexedDBをクリア
+  await idbClear();
+  render();
+}
+
+// ============================================================
+// Import / Export
+// ============================================================
+function openImport() {
+  document.getElementById('import-name').value = state.collectionName || '';
+  document.getElementById('import-text').value = '';
+  document.getElementById('import-modal').showModal();
+}
+
+async function loadJsonFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    // 念のためパースだけ試して、エラーなら警告
+    try { JSON.parse(text); } catch (e) {
+      alert('タグ付けリストとして読み込めませんでした: ' + e.message);
+      event.target.value = '';
+      return;
+    }
+    document.getElementById('import-text').value = text;
+    // コレクション名が未入力なら、ファイル名から自動補完（拡張子と-backup除去）
+    const nameField = document.getElementById('import-name');
+    if (!nameField.value.trim()) {
+      const guessed = file.name
+        .replace(/\.json$/i, '')
+        .replace(/-backup$/i, '')
+        .trim();
+      nameField.value = guessed;
+    }
+  } catch (e) {
+    alert('ファイル読み込み失敗: ' + e.message);
+  } finally {
+    event.target.value = '';
+  }
+}
+
+function performImport() {
+  const name = document.getElementById('import-name').value.trim();
+  const text = document.getElementById('import-text').value.trim();
+
+  if (!text) { alert('タグ付けリストを入力してください'); return; }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (e) {
+    alert('タグ付けリストの読み込みに失敗しました: ' + e.message);
+    return;
+  }
+
+  // ユーザー入力のcollection名を優先するため、いったん適用してから上書き
+  const result = applyImportedJson(parsed, null);
+  if (!result.success) {
+    alert('インポート失敗: ' + result.error);
+    return;
+  }
+  if (name) {
+    state.collectionName = name;
+    saveState();
+  }
+
+  document.getElementById('import-modal').close();
+  render();
+
+  if (result.autosuggestCount > 0) {
+    const list = result.autosuggestTags.slice(0, 20).join('、');
+    const more = result.autosuggestCount > 20 ? ` 他${result.autosuggestCount - 20}個` : '';
+    setTimeout(() => {
+      alert(`オートサジェストタグが ${result.autosuggestCount} 種類ありました：\n\n${list}${more}\n\nスタンプ用として許可タグ扱いにしています。画面上では青色で表示されます。`);
+    }, 200);
+  }
+
+  if (result.invalidCount > 0) {
+    const list = result.invalidTags.slice(0, 20).join('、');
+    const more = result.invalidCount > 20 ? ` 他${result.invalidCount - 20}個` : '';
+    setTimeout(() => {
+      alert(`⚠ LINE公式マスタにないタグが ${result.invalidCount} 種類ありました：\n\n${list}${more}\n\n該当タグは画面上で警告色（茶色）で表示されています。LINE申請前に置き換えを検討してください。`);
+    }, result.autosuggestCount > 0 ? 400 : 200);
+  }
+
+  if (result.dupCount > 0) {
+    const lines = result.duplicates.slice(0, 20)
+      .map(d => `${d.key}：${d.tags.join('、')}`).join('\n');
+    const more = result.dupCount > 20 ? `\n…他${result.dupCount - 20}件` : '';
+    setTimeout(() => {
+      alert(`⚠ 同じスタンプ内でタグが重複しています（${result.dupCount}件）：\n\n${lines}${more}\n\nLINE申請前に重複の解消を検討してください。`);
+    }, result.invalidCount > 0 ? 600 : (result.autosuggestCount > 0 ? 400 : 200));
+  }
+}
+
+// オブジェクトキー順を保証するJSON文字列ビルダー
+// JavaScriptのオブジェクトは整数キーが先に並ぶ仕様なので、手動で組み立てる
+function buildOrderedJsonString(stateData) {
+  const s = stateData || state;
+  const keys = Object.keys(s.tags || {});
+  const digits = getDisplayDigits(keys.map(normKey));
+
+  // 数値順にソート＋ゼロ埋め桁数統一
+  const sortedEntries = keys
+    .map(k => ({ orig: k, num: parseInt(k, 10) || 0 }))
+    .sort((a, b) => a.num - b.num)
+    .map(({ orig, num }) => ({
+      newKey: String(num).padStart(digits, '0'),
+      tags: s.tags[orig] || []
+    }));
+
+  const tagLines = sortedEntries.map(({ newKey, tags }) => {
+    return `    ${JSON.stringify(newKey)}: ${JSON.stringify(tags)}`;
+  });
+
+  return '{\n' +
+    `  "version": ${JSON.stringify(s.version)},\n` +
+    `  "collectionName": ${JSON.stringify(s.collectionName)},\n` +
+    `  "importedAt": ${JSON.stringify(s.importedAt)},\n` +
+    `  "tags": {\n${tagLines.join(',\n')}\n  },\n` +
+    `  "userMustTags": ${JSON.stringify(s.userMustTags)}\n` +
+    '}';
+}
+
+function exportJSON() {
+  const jsonStr = buildOrderedJsonString();
+  const blob = new Blob([jsonStr], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${state.collectionName || 'tags'}-backup.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openJsonPreview() {
+  const jsonStr = buildOrderedJsonString();
+  const title = state.collectionName || 'tags';
+  const count = Object.keys(state.tags).length;
+
+  // ブラウザの新規タブにHTMLとしてレンダリング（テキスト選択＆コピー可能）
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>タグ付けリスト Preview: ${escapeHtml(title)}</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<style>
+  body {
+    font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+    background: #f4faf0;
+    color: #2d3d28;
+    margin: 0;
+    padding: 20px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #c8dfc0;
+    margin-bottom: 16px;
+  }
+  h1 { margin: 0; font-size: 16px; color: #2d4a25; font-family: sans-serif; }
+  .meta { font-size: 12px; color: #6b8060; font-family: sans-serif; }
+  button {
+    font-family: sans-serif;
+    background: #5fa856;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-left: 8px;
+  }
+  button:hover { background: #4a8a44; }
+  pre {
+    background: white;
+    border: 1px solid #c8dfc0;
+    border-radius: 8px;
+    padding: 16px;
+    overflow: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>${escapeHtml(title)}</h1>
+  <div>
+    <span class="meta">${count} 件 / ${jsonStr.length.toLocaleString()} 文字</span>
+    <button onclick="copyJson()">クリップボードにコピー</button>
+    <button onclick="selectAll()">全選択</button>
+  </div>
+</header>
+<pre id="json">${escapeHtml(jsonStr)}</pre>
+<scr` + `ipt>
+async function copyJson() {
+  try {
+    await navigator.clipboard.writeText(document.getElementById('json').textContent);
+    event.target.textContent = 'コピーしました ✓';
+    setTimeout(() => { event.target.textContent = 'クリップボードにコピー'; }, 1200);
+  } catch (e) {
+    selectAll();
+    alert('コピーできませんでした。テキストを選択したので手動でコピーしてください。');
+  }
+}
+function selectAll() {
+  const range = document.createRange();
+  range.selectNodeContents(document.getElementById('json'));
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+<\/scr` + `ipt>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  // しばらくしてrevoke（新規タブで表示完了するまで時間が必要）
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+async function exportPNG() {
+  const target = displayMode === 'minimal'
+    ? document.getElementById('stickers-list')
+    : document.getElementById('capture-target');
+  if (Object.keys(state.tags).length === 0 && Object.keys(stickerImages).length === 0) {
+    alert('エクスポートするデータがありません'); return;
+  }
+  target.classList.add('exporting');
+  const frozen = [];
+  try {
+    // 画像を height:auto（アスペクト比表示）にしているため、html2canvasの
+    // クローン内で画像の高さ計算がずれ、下部のセルが見切れることがある。
+    // 対策：書き出し直前に各画像のデコードを待ち、現在の描画サイズをpx固定する。
+    const imgs = Array.from(target.querySelectorAll('img'));
+    await Promise.all(imgs.map(img => {
+      if (img.complete && img.naturalWidth) return Promise.resolve();
+      if (img.decode) return img.decode().catch(() => {});
+      return new Promise(res => { img.onload = img.onerror = res; });
+    }));
+    imgs.forEach(img => {
+      const w = img.clientWidth, h = img.clientHeight;
+      if (!w || !h) return;
+      frozen.push([img, img.style.width, img.style.height]);
+      img.style.width = w + 'px';
+      img.style.height = h + 'px';
+    });
+
+    // 画像サイズ固定後、レイアウトが確定するまで待つ（描画2フレーム分）
+    await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
+
+    // 実サイズを計測。アスペクト比可変で高さが読み切れず下部が見切れるのを
+    // 防ぐため、scroll/offset/boundingRectのうち最大値を採り、さらに余白を加える。
+    const rect = target.getBoundingClientRect();
+    const width = Math.ceil(Math.max(target.scrollWidth, target.offsetWidth, rect.width));
+    const height = Math.ceil(Math.max(target.scrollHeight, target.offsetHeight, rect.height)) + 24;
+
+    // モバイル（特にiOS Safari）はcanvasの最大サイズ・面積に制限があり、
+    // scale:2のままだと縦長の一覧で上限を超え、途中までしか描画されない。
+    // 制限内に収まるようscaleを動的に下げ、全体が必ず1枚に収まるようにする。
+    const MAX_CANVAS_DIM = 8192;       // 1辺の最大px（保守的な安全値）
+    const MAX_CANVAS_AREA = 16777216;  // 面積の最大px²（iOS Safariの制限）
+    let scale = Math.min(
+      2,
+      MAX_CANVAS_DIM / width,
+      MAX_CANVAS_DIM / height,
+      Math.sqrt(MAX_CANVAS_AREA / (width * height))
+    );
+    if (!isFinite(scale) || scale <= 0) scale = 1;
+
+    const canvas = await html2canvas(target, {
+      backgroundColor: '#f4faf0',
+      scale: scale,
+      useCORS: true,
+      imageTimeout: 0,
+      scrollX: 0,
+      scrollY: 0,
+      x: 0,
+      y: 0,
+      width: width,
+      height: height,
+      windowWidth: width,
+      windowHeight: height
+    });
+    const link = document.createElement('a');
+    link.download = `${state.collectionName || 'tags'}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } finally {
+    // 固定したサイズを元に戻す
+    frozen.forEach(([img, w, h]) => { img.style.width = w; img.style.height = h; });
+    target.classList.remove('exporting');
+  }
+}
+
+// ============================================================
+// ZIP Upload
+// ============================================================
+async function handleZipUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const newImages = {};
+    const newSpecial = {};
+    const newEntries = {};
+    const newImageBlobs = {};  // IDB保存用
+    const newSpecialBlobs = {}; // IDB保存用
+    const newOtherBlobs = {};   // IDB保存用（元ファイル一式を原名のまま）
+    const skipped = [];
+    let foundTagsJson = null;
+    let foundMeta = null;
+
+    const fileEntries = Object.values(zip.files).filter(e => !e.dir);
+
+    for (const entry of fileEntries) {
+      const name = entry.name;
+      const baseName = name.split('/').pop();
+
+      // tags.json 検出（複数あった場合は最後のもの優先）
+      if (/^tags\.json$/i.test(baseName)) {
+        try {
+          const text = await entry.async('string');
+          foundTagsJson = JSON.parse(text);
+        } catch (e) {
+          console.warn('tags.json パース失敗:', e);
+        }
+        // tags.json は再パッケージ用のエントリには含めない（後で新規生成するため）
+        continue;
+      }
+      if (/^meta\.txt$/i.test(baseName)) {
+        try {
+          const text = await entry.async('string');
+          foundMeta = parseMetaTxt(text);
+        } catch (e) {
+          console.warn('meta.txt 読み込み失敗:', e);
+        }
+        // meta.txt は編集後の内容で再生成する
+        continue;
+      }
+
+      const blob = await entry.async('blob');
+      newEntries[name] = blob;
+      newOtherBlobs[name] = blob; // 元ファイルを原名のまま保持（書き出し時にリネームしない）
+
+      if (!/\.(png|jpe?g|gif|webp)$/i.test(name)) continue;
+
+      const specialMatch = baseName.match(/^(main|tab|stab|key)\.(png|jpe?g|gif|webp)$/i);
+      if (specialMatch) {
+        const kind = specialMatch[1].toLowerCase();
+        newSpecial[kind] = URL.createObjectURL(blob);
+        newSpecialBlobs[kind] = blob; // IDB用
+        skipped.push(baseName);
+        continue;
+      }
+      const match = baseName.match(/(\d+)/);
+      const no = match
+        ? normKey(match[1])
+        : baseName.replace(/\.(png|jpe?g|gif|webp)$/i, '');
+      newImages[no] = URL.createObjectURL(blob);
+      newImageBlobs[no] = blob; // IDB用
+    }
+
+    // URL破棄
+    Object.values(stickerImages).forEach(u => {
+      try { URL.revokeObjectURL(u); } catch(e){}
+    });
+    Object.values(specialImages).forEach(u => {
+      try { URL.revokeObjectURL(u); } catch(e){}
+    });
+    stickerImages = newImages;
+    specialImages = newSpecial;
+    zipEntries = newEntries;
+    originalZipName = file.name.replace(/\.zip$/i, '');
+
+    // IndexedDB に保存（旧画像をクリアして新しいものを保存）
+    await idbClear();
+    for (const [no, blob] of Object.entries(newImageBlobs))   await idbPut('s:' + no,   blob);
+    for (const [kind, blob] of Object.entries(newSpecialBlobs)) await idbPut('p:' + kind, blob);
+    for (const [name, blob] of Object.entries(newOtherBlobs))  await idbPut('f:' + name, blob);
+
+    if (foundMeta) {
+      applyMeta(foundMeta);
+    }
+
+    // tags.json が見つかったら自動でタグデータも反映
+    let tagsImported = false;
+    let tagsImportInfo = '';
+    if (foundTagsJson) {
+      const result = applyImportedJson(foundTagsJson, originalZipName);
+      if (result.success) {
+        tagsImported = true;
+        tagsImportInfo = `\nZIP内の tags.json から ${result.keyCount} 枚分のタグも読み込みました。`;
+        if (result.autosuggestCount > 0) {
+          tagsImportInfo += `\n（オートサジェストタグ ${result.autosuggestCount} 種類：スタンプ用として許可）`;
+        }
+        if (result.invalidCount > 0) {
+          tagsImportInfo += `\n（マスタ外タグ ${result.invalidCount} 種類あり）`;
+        }
+        if (result.dupCount > 0) {
+          tagsImportInfo += `\n（タグ重複 ${result.dupCount} 件あり）`;
+        }
+      } else {
+        tagsImportInfo = `\nZIP内の tags.json は形式不正で読み込めませんでした。`;
+      }
+    }
+    let metaImportInfo = '';
+    if (foundMeta) {
+      metaImportInfo = foundMeta.jaTitle
+        ? `\nZIP内の meta.txt から情報を読み込みました（${foundMeta.jaTitle}）。`
+        : `\nZIP内の meta.txt から情報を読み込みました。`;
+    }
+
+    render();
+
+    const count = Object.keys(newImages).length;
+    let msg = `${count} 枚の画像を読み込みました。`;
+    if (skipped.length > 0) msg += `\n（メイン画像等：${skipped.join(', ')}）`;
+    if (count === 0 && !tagsImported) msg = '画像ファイルが見つかりませんでした。ZIPの中身を確認してください。';
+    msg += tagsImportInfo;
+    msg += metaImportInfo;
+    alert(msg);
+
+  } catch (e) {
+    alert('ZIP読み込み失敗: ' + e.message);
+  } finally {
+    event.target.value = '';
+  }
+}
+
+async function handlePngUpload(event) {
+  const files = Array.from(event.target.files || []);
+  if (files.length === 0) return;
+  const imageFiles = files.filter(f => /\.(png|jpe?g|gif|webp)$/i.test(f.name));
+  if (imageFiles.length === 0) {
+    alert('PNG/JPG/GIF/WEBP 画像を選んでください。');
+    event.target.value = '';
+    return;
+  }
+  try {
+    const added = await addPngFiles(imageFiles);
+    render();
+    alert(`${added} 枚の画像を読み込みました。`);
+  } catch (e) {
+    alert('読み込み失敗: ' + e.message);
+  } finally {
+    event.target.value = '';
+  }
+}
+
+// インポートJSON適用ロジックを共通化（modalからもZIP内tags.jsonからも呼べる）
+function applyImportedJson(parsed, fallbackName) {
+  if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+    return { success: false, error: 'オブジェクト形式ではありません' };
+  }
+
+  // 形式判別：
+  // (A) フラット形式 {"001": [...], ...}
+  // (B) 完全形式 { version, collectionName, tags: {...}, userMustTags: [...] }
+  let tagsObj, importedName, importedMustTags;
+  if (parsed.tags && typeof parsed.tags === 'object') {
+    tagsObj = parsed.tags;
+    importedName = parsed.collectionName;
+    importedMustTags = Array.isArray(parsed.userMustTags) ? parsed.userMustTags : null;
+  } else {
+    tagsObj = parsed;
+  }
+
+  const keys = Object.keys(tagsObj);
+  if (keys.length === 0) {
+    return { success: false, error: '空のタグ付けリストです' };
+  }
+  for (const k of keys) {
+    if (!Array.isArray(tagsObj[k])) {
+      return { success: false, error: `「${k}」のタグが配列ではありません` };
+    }
+  }
+
+  // マスタ外チェック
+  const invalidTags = new Set();
+  const autosuggestTags = new Set();
+  for (const k of keys) {
+    for (const t of tagsObj[k]) {
+      if (isAutosuggestTagAllowed(t)) autosuggestTags.add(t);
+      else if (!ALL_MASTER_TAGS.has(t)) invalidTags.add(t);
+    }
+  }
+
+  // スタンプ内タグ重複チェック（1つのスタンプに同じタグが複数あるか）
+  const duplicates = [];
+  for (const k of keys) {
+    const seen = new Set();
+    const dupForKey = new Set();
+    for (const t of tagsObj[k]) {
+      if (seen.has(t)) dupForKey.add(t);
+      else seen.add(t);
+    }
+    if (dupForKey.size > 0) {
+      duplicates.push({ key: k, tags: Array.from(dupForKey) });
+    }
+  }
+
+  // キー正規化（ゼロ埋め桁数統一）
+  const digits = getDisplayDigits(keys.map(normKey));
+  const normalized = {};
+  keys
+    .map(k => ({ orig: k, num: parseInt(k, 10) || 0 }))
+    .sort((a, b) => a.num - b.num)
+    .forEach(({ orig, num }) => {
+      const newKey = String(num).padStart(digits, '0');
+      normalized[newKey] = tagsObj[orig];
+    });
+
+  state.tags = normalized;
+  if (importedName) {
+    state.collectionName = importedName;
+  } else if (fallbackName && !state.collectionName) {
+    state.collectionName = fallbackName;
+  }
+  if (importedMustTags) {
+    state.userMustTags = importedMustTags;
+  }
+  state.importedAt = new Date().toISOString();
+  saveState();
+
+  return {
+    success: true,
+    keyCount: keys.length,
+    invalidCount: invalidTags.size,
+    invalidTags: Array.from(invalidTags),
+    autosuggestCount: autosuggestTags.size,
+    autosuggestTags: Array.from(autosuggestTags),
+    dupCount: duplicates.length,
+    duplicates: duplicates
+  };
+}
+
+// 単体画像ファイル群を stickerImages に追加（ファイル名から番号抽出）
+async function addPngFiles(files) {
+  let added = 0;
+  for (const file of files) {
+    const baseName = file.name.split('/').pop();
+    // main / tab / stab / key 判定
+    const specialMatch = baseName.match(/^(main|tab|stab|key)\.(png|jpe?g|gif|webp)$/i);
+    if (specialMatch) {
+      const kind = specialMatch[1].toLowerCase();
+      if (specialImages[kind]) {
+        try { URL.revokeObjectURL(specialImages[kind]); } catch(e){}
+      }
+      specialImages[kind] = URL.createObjectURL(file);
+      idbPut('p:' + kind, file); // IDBに保存（fire-and-forget）
+      idbPut('f:' + file.name, file); // 原名のまま保持
+      zipEntries[file.name] = file;
+      added++;
+      continue;
+    }
+    const match = baseName.match(/(\d+)/);
+    // 数字があれば番号キー、なければファイル名（拡張子除く）をキーに使用
+    const no = match
+      ? normKey(match[1])
+      : baseName.replace(/\.(png|jpe?g|gif|webp)$/i, '');
+    if (stickerImages[no]) {
+      try { URL.revokeObjectURL(stickerImages[no]); } catch(e){}
+    }
+    stickerImages[no] = URL.createObjectURL(file);
+    idbPut('s:' + no, file); // IDBに保存（fire-and-forget）
+    idbPut('f:' + file.name, file); // 原名のまま保持
+    zipEntries[file.name] = file;
+    added++;
+  }
+  return added;
+}
+
+// ZIP+JSONをまとめて再パッケージ
+async function exportZipWithJson() {
+  // IDBから全画像を取得（リロード後もここに残っている）
+  const idbData = await idbGetAll(); // { 's:1': Blob, 's:happy': Blob, 'p:main': Blob, ... }
+
+  // メモリ上の zipEntries も合わせて使う（今セッション中にアップロードされたもの）
+  const hasImages = Object.keys(idbData).length > 0 || Object.keys(zipEntries).length > 0;
+  if (!hasImages) {
+    alert('表示中の画像がありません。\nまずスタンプ・絵文字画像をアップロードしてください。');
+    return;
+  }
+  if (Object.keys(state.tags).length === 0) {
+    if (!confirm('タグデータが空ですが、それでもZIPを出力しますか？')) return;
+  }
+  try {
+    const zip = new JSZip();
+
+    // 原名で保持した元ファイル（f:）があれば、それを最優先で使う。
+    // → 元のファイル名（02.png / 002.png 等）を一切リネームせず再現する。
+    const hasOrig = Object.keys(idbData).some(k => k.startsWith('f:'));
+
+    for (const [idbKey, blob] of Object.entries(idbData)) {
+      let fileName = null;
+      if (idbKey.startsWith('f:')) {
+        // 元のファイル名（パス）のまま
+        fileName = idbKey.slice(2);
+      } else if (!hasOrig && idbKey.startsWith('s:')) {
+        // 旧データ（f:無し）のみのフォールバック
+        const k = idbKey.slice(2);
+        const n = parseInt(k, 10);
+        fileName = !isNaN(n)
+          ? String(n).padStart(3, '0') + '.png'
+          : (/\.[a-zA-Z]{2,4}$/.test(k) ? k : k + '.png');
+      } else if (!hasOrig && idbKey.startsWith('p:')) {
+        fileName = idbKey.slice(2) + '.png';
+      }
+      if (fileName && !/(^|\/)(tags\.json|meta\.txt)$/i.test(fileName)) zip.file(fileName, blob);
+    }
+
+    // zipEntries にあってIDBにないもの（今セッション中だけのもの）も追加
+    for (const [name, blob] of Object.entries(zipEntries)) {
+      if (/(^|\/)(tags\.json|meta\.txt)$/i.test(name)) continue;
+      if (!zip.files[name]) {
+        zip.file(name, blob);
+      }
+    }
+
+    // tags.json を追加
+    const tagsJson = buildOrderedJsonString();
+    zip.file('tags.json', tagsJson);
+    zip.file('meta.txt', buildMetaTxt());
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const baseName = state.collectionName || originalZipName || 'sticker';
+    // ファイル名に使えない文字を除去
+    const safe = baseName.replace(/[\\/:*?"<>|]/g, '_');
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safe}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('ZIP出力失敗: ' + e.message);
+  }
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatDate(iso) {
+  try {
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch (e) { return iso; }
+}
+
+// 初期化：設定を適用し、IDBから画像を復元してレンダリング
+(async () => {
+  setThumbBg(thumbBg);
+  setThumbSize(fullThumbSize);
+  await loadOfficialTags();
+  await loadAutosuggestTags();
+  await restoreImagesFromDB(); // 保存済み画像を復元
+  render();
+})();
+</script>
+</body>
+</html>
