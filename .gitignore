@@ -1,0 +1,7 @@
+# すべてを無視して、必要な2ファイルだけ追跡する
+*
+
+# 追跡するファイル
+!.gitignore
+!tags_sticker_latest.json
+!tags_sticker_autosuggest_only.json
