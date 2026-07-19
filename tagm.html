@@ -1691,7 +1691,10 @@ function isStickerTagContext() {
 }
 
 function isAutosuggestTagAllowed(tag) {
-  return isStickerTagContext() && AUTOSUGGEST_TAGS.has(tag);
+  // AUTOSUGGEST_TAGSは「一度でも候補に入った語」を追加のみで蓄積するため、
+  // 公開タグへ昇格済みの語が混在し得る。ALL_MASTER_TAGSにある語は
+  // 常に「公式タグ」として扱い、オートサジェスト扱いにしない。
+  return isStickerTagContext() && AUTOSUGGEST_TAGS.has(tag) && !ALL_MASTER_TAGS.has(tag);
 }
 
 function getTagKind(tag) {
