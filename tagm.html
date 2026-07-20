@@ -1499,33 +1499,10 @@ function formatTagMasterDate(json) {
 }
 
 // 公開タグにはないが、スタンプ申請画面のオートサジェストで出るタグ。
-// 同階層または assets/ に tags_sticker_autosuggest_only.json があれば起動時に追加読み込みする。
-const AUTOSUGGEST_TAG_MASTER = {
-  "オートサジェスト": [
-    "嬉しい",
-    "うらやましい",
-    "愛してる",
-    "甘える",
-    "むぅ",
-    "おめでとう",
-    "おーい",
-    "こらー",
-    "チェッ",
-    "大丈夫",
-    "ピンチ",
-    "仕事中",
-    "任せた",
-    "休み",
-    "出かける",
-    "お正月",
-    "謹賀新年",
-    "ネズミ",
-    "鮭"
-  ]
-};
-
+// 同階層または assets/ に tags_sticker_autosuggest_only.json があれば起動時に読み込む
+// （loadAutosuggestTags()）。ハードコードの初期値は持たず、常にJSON駆動にする
+// ことで、昇格・削除のたびにコードを手で直す必要をなくしている。
 const AUTOSUGGEST_TAGS = new Set();
-Object.values(AUTOSUGGEST_TAG_MASTER).forEach(arr => arr.forEach(t => AUTOSUGGEST_TAGS.add(t)));
 
 function normalizeCategoryName(name, tags) {
   const label = String(name || 'タグ').replace(/\s*\(\d+\)$/, '').trim() || 'タグ';
@@ -1691,7 +1668,10 @@ function isStickerTagContext() {
 }
 
 function isAutosuggestTagAllowed(tag) {
-  return isStickerTagContext() && AUTOSUGGEST_TAGS.has(tag);
+  // AUTOSUGGEST_TAGSは「一度でも候補に入った語」を追加のみで蓄積するため、
+  // 公開タグへ昇格済みの語が混在し得る。ALL_MASTER_TAGSにある語は
+  // 常に「公式タグ」として扱い、オートサジェスト扱いにしない。
+  return isStickerTagContext() && AUTOSUGGEST_TAGS.has(tag) && !ALL_MASTER_TAGS.has(tag);
 }
 
 function getTagKind(tag) {
