@@ -3200,25 +3200,18 @@ async function exportPNG() {
     }
 
     const baseName = (state.collectionName || 'tags').replace(/[\\/:*?"<>|]/g, '_');
-    if (blobs.length === 1) {
-      const url = URL.createObjectURL(blobs[0]);
+    const digits = Math.max(2, String(blobs.length).length);
+    for (let i = 0; i < blobs.length; i++) {
+      const url = URL.createObjectURL(blobs[i]);
       const link = document.createElement('a');
-      link.download = `${baseName}.png`;
+      link.download = blobs.length === 1
+        ? `${baseName}.png`
+        : `${baseName}_${String(i + 1).padStart(digits, '0')}.png`;
       link.href = url;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 30000);
-    } else {
-      // Androidでは連続ダウンロードがブロックされやすいため、連番PNGをZIPで1回保存する。
-      const zip = new JSZip();
-      const digits = String(blobs.length).length;
-      blobs.forEach((blob, i) => zip.file(`${baseName}_${String(i + 1).padStart(digits, '0')}.png`, blob));
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.download = `${baseName}_PNG.zip`;
-      link.href = url;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      // Androidのダウンロード処理が次のファイルを受け取れるよう少し間隔を空ける。
+      if (i < blobs.length - 1) await new Promise(res => setTimeout(res, 700));
     }
   } finally {
     exportPages.forEach(page => page.remove());
