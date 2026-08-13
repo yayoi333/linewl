@@ -3071,6 +3071,7 @@ async function exportPNG() {
   }
   target.classList.add('exporting');
   const frozen = [];
+  const exportPages = [];
   try {
     // 画像を height:auto（アスペクト比表示）にしているため、html2canvasの
     // クローン内で画像の高さ計算がずれ、下部のセルが見切れることがある。
@@ -3092,44 +3093,135 @@ async function exportPNG() {
     // 画像サイズ固定後、レイアウトが確定するまで待つ（描画2フレーム分）
     await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
 
-    // 実サイズを計測。アスペクト比可変で高さが読み切れず下部が見切れるのを
-    // 防ぐため、scroll/offset/boundingRectのうち最大値を採り、さらに余白を加える。
-    const rect = target.getBoundingClientRect();
-    const width = Math.ceil(Math.max(target.scrollWidth, target.offsetWidth, rect.width));
-    const height = Math.ceil(Math.max(target.scrollHeight, target.offsetHeight, rect.height)) + 24;
+    // Android端末ではcanvas上限が機種・メモリ量で異なるため、巨大な1枚を作らない。
+    // 通常表示はカード単位、画像のみ表示はグリッドの横一列単位でページを分ける。
+    const PAGE_HEIGHT = 3500;
+    const sourceWidth = Math.ceil(Math.max(target.scrollWidth, target.offsetWidth, target.getBoundingClientRect().width));
+    const groups = [];
+    let firstPageHeaderHeight = 0;
 
-    // モバイル（特にiOS Safari）はcanvasの最大サイズ・面積に制限があり、
-    // scale:2のままだと縦長の一覧で上限を超え、途中までしか描画されない。
-    // 制限内に収まるようscaleを動的に下げ、全体が必ず1枚に収まるようにする。
-    const MAX_CANVAS_DIM = 8192;       // 1辺の最大px（保守的な安全値）
-    const MAX_CANVAS_AREA = 16777216;  // 面積の最大px²（iOS Safariの制限）
-    let scale = Math.min(
-      2,
-      MAX_CANVAS_DIM / width,
-      MAX_CANVAS_DIM / height,
-      Math.sqrt(MAX_CANVAS_AREA / (width * height))
-    );
-    if (!isFinite(scale) || scale <= 0) scale = 1;
+    if (displayMode === 'minimal') {
+      const cells = Array.from(target.querySelectorAll('.minimal-cell'));
+      cells.forEach(cell => {
+        const top = Math.round(cell.offsetTop);
+        let group = groups[groups.length - 1];
+        if (!group || Math.abs(group.top - top) > 2) {
+          group = { top, nodes: [], height: 0 };
+          groups.push(group);
+        }
+        group.nodes.push(cell);
+        group.height = Math.max(group.height, cell.offsetHeight + 10);
+      });
+    } else {
+      const list = document.getElementById('stickers-list');
+      firstPageHeaderHeight = Math.max(0, Math.ceil(list.getBoundingClientRect().top - target.getBoundingClientRect().top));
+      Array.from(list.querySelectorAll(':scope > .sticker-row')).forEach(row => {
+        const style = getComputedStyle(row);
+        groups.push({
+          nodes: [row],
+          height: Math.ceil(row.getBoundingClientRect().height + parseFloat(style.marginBottom || 0))
+        });
+      });
+    }
 
-    const canvas = await html2canvas(target, {
-      backgroundColor: '#f4faf0',
-      scale: scale,
-      useCORS: true,
-      imageTimeout: 0,
-      scrollX: 0,
-      scrollY: 0,
-      x: 0,
-      y: 0,
-      width: width,
-      height: height,
-      windowWidth: width,
-      windowHeight: height
+    // 境界単位でページを割り当てる。1要素が上限を超える場合も要素自体は分断しない。
+    const pageGroups = [];
+    let current = [];
+    let used = displayMode === 'full' ? firstPageHeaderHeight : 0;
+    groups.forEach(group => {
+      if (current.length && used + group.height > PAGE_HEIGHT) {
+        pageGroups.push(current);
+        current = [];
+        used = 0;
+      }
+      current.push(group);
+      used += group.height;
     });
-    const link = document.createElement('a');
-    link.download = `${state.collectionName || 'tags'}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    if (current.length) pageGroups.push(current);
+
+    // ページごとの一時DOMを作る。元画像の固定済みサイズもcloneNodeで引き継がれる。
+    pageGroups.forEach((page, pageIndex) => {
+      let pageEl;
+      if (displayMode === 'minimal') {
+        pageEl = document.createElement('div');
+        pageEl.className = 'minimal-grid exporting';
+        const sourceGrid = target.querySelector('.minimal-grid');
+        pageEl.style.cssText = sourceGrid ? sourceGrid.style.cssText : '';
+        page.forEach(group => group.nodes.forEach(node => pageEl.appendChild(node.cloneNode(true))));
+      } else {
+        pageEl = document.createElement('main');
+        pageEl.className = 'exporting';
+        if (pageIndex === 0) {
+          pageEl.appendChild(document.getElementById('meta-panel').cloneNode(true));
+          pageEl.appendChild(document.getElementById('must-tags-panel').cloneNode(true));
+        }
+        const list = document.createElement('div');
+        page.forEach(group => group.nodes.forEach(node => list.appendChild(node.cloneNode(true))));
+        pageEl.appendChild(list);
+      }
+      pageEl.style.width = sourceWidth + 'px';
+      pageEl.style.boxSizing = 'border-box';
+      pageEl.style.background = '#f4faf0';
+      pageEl.style.paddingBottom = '24px';
+      exportPages.push(pageEl);
+    });
+
+    const blobs = [];
+    for (const pageEl of exportPages) {
+      // 画面外に置くとAndroid版Chromeが画像を省略することがあるため、背面に固定する。
+      pageEl.style.position = 'fixed';
+      pageEl.style.left = '0';
+      pageEl.style.top = '0';
+      pageEl.style.zIndex = '-2147483647';
+      pageEl.style.pointerEvents = 'none';
+      document.body.appendChild(pageEl);
+      await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
+
+      const width = Math.ceil(Math.max(pageEl.scrollWidth, pageEl.offsetWidth, pageEl.getBoundingClientRect().width));
+      const height = Math.ceil(Math.max(pageEl.scrollHeight, pageEl.offsetHeight, pageEl.getBoundingClientRect().height));
+      const scale = Math.min(2, 7000 / width, 7000 / height, Math.sqrt(12000000 / (width * height)));
+      const canvas = await html2canvas(pageEl, {
+        backgroundColor: '#f4faf0',
+        scale: isFinite(scale) && scale > 0 ? scale : 1,
+        useCORS: true,
+        imageTimeout: 0,
+        scrollX: 0,
+        scrollY: 0,
+        width,
+        height,
+        windowWidth: width,
+        windowHeight: height
+      });
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(value => value ? resolve(value) : reject(new Error('PNGの生成に失敗しました')), 'image/png');
+      });
+      blobs.push(blob);
+      pageEl.remove();
+    }
+
+    const baseName = (state.collectionName || 'tags').replace(/[\\/:*?"<>|]/g, '_');
+    if (blobs.length === 1) {
+      const url = URL.createObjectURL(blobs[0]);
+      const link = document.createElement('a');
+      link.download = `${baseName}.png`;
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } else {
+      // Androidでは連続ダウンロードがブロックされやすいため、連番PNGをZIPで1回保存する。
+      const zip = new JSZip();
+      const digits = String(blobs.length).length;
+      blobs.forEach((blob, i) => zip.file(`${baseName}_${String(i + 1).padStart(digits, '0')}.png`, blob));
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.download = `${baseName}_PNG.zip`;
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
   } finally {
+    exportPages.forEach(page => page.remove());
     // 固定したサイズを元に戻す
     frozen.forEach(([img, w, h]) => { img.style.width = w; img.style.height = h; });
     target.classList.remove('exporting');
