@@ -1034,11 +1034,7 @@
     <label class="text-sm" style="color:#3a4d33;"><input type="radio" name="ai-tag-mode" id="ai-tag-mode-all" value="all" onchange="aiUpdateTargetSummary()"> 全部上書き</label>
   </div>
 
-  <div class="mb-4 flex items-center gap-2">
-    <label class="text-xs tracking-wider uppercase" style="color: #6b8060;">まとめて送る枚数</label>
-    <input id="ai-tag-chunk-size" type="number" min="1" max="50" value="15" class="px-2 py-1 rounded" style="width:64px; background:white; border: 1px solid #c8dfc0;">
-    <span class="text-xs" style="color:#8ba07d;">枚/リクエスト（多いほど速いが1回の失敗で失う枚数が増える）</span>
-  </div>
+
 
   <div id="ai-tag-target-summary" class="text-sm mb-4" style="color:#2d4a25;">対象: -</div>
 
@@ -4104,6 +4100,15 @@ function aiValidateTagForContext(tag, allowAutosuggest) {
 // 常に18個提示 → そこから9個選ばせる、という実測仕様に合わせている）。
 const AI_CANDIDATE_MAX = 18;
 
+// 1リクエストにまとめて送る画像の枚数。ユーザーに選ばせない。
+// 少なすぎるとリクエスト数が増えてレート制限に当たりやすく、
+// 多すぎると1回の失敗で失う枚数が増え、1リクエストも長くなる。
+const AI_CHUNK_SIZE = 8;
+// チャンクとチャンクの間に必ず置く待ち時間(ms)。連続送信でレート制限を踏まないため。
+const AI_CHUNK_INTERVAL_MS = 3000;
+// 429を受けたときの待ち時間(ms)。順に伸ばす。使い切ったら諦める。
+const AI_RETRY_WAITS_MS = [8000, 20000, 45000];
+
 // 思考予算。0 だと 608 語のタグリストと突き合わせながら選ぶ余裕が無く、
 // 「笑顔（正しくは にっこり）」のようなリスト外の語を作ってしまう。
 // -1 = モデルが必要量を自動で決める / 0 = 無効 / 正の整数 = トークン数上限。
@@ -4196,8 +4201,8 @@ function aiBuildFillInInstruction(allowAutosuggest) {
 }
 
 // --- Gemini呼び出し（429は5秒待って1回だけ再試行） ---
-async function aiCallGemini(apiKey, parts, allowRetry429) {
-  if (allowRetry429 === undefined) allowRetry429 = true;
+async function aiCallGemini(apiKey, parts, attempt, onWait) {
+  attempt = attempt || 0;
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
@@ -4211,9 +4216,24 @@ async function aiCallGemini(apiKey, parts, allowRetry429) {
         }
       })
     });
-    if (res.status === 429 && allowRetry429) {
-      await new Promise(r => setTimeout(r, 5000));
-      return aiCallGemini(apiKey, parts, false);
+    if (res.status === 429) {
+      const body = await res.json().catch(() => null);
+      // Google APIは RetryInfo で「何秒後なら良いか」を返すことがある。あればそれに従う。
+      let waitMs = AI_RETRY_WAITS_MS[attempt] || 0;
+      const details = body && body.error && body.error.details;
+      if (Array.isArray(details)) {
+        for (const d of details) {
+          const m = d && typeof d.retryDelay === "string" && d.retryDelay.match(/^([0-9.]+)s$/);
+          if (m) waitMs = Math.max(waitMs, Math.ceil(parseFloat(m[1]) * 1000) + 1000);
+        }
+      }
+      if (attempt < AI_RETRY_WAITS_MS.length) {
+        if (onWait) onWait(Math.round(waitMs / 1000), attempt + 1, AI_RETRY_WAITS_MS.length);
+        await new Promise(r => setTimeout(r, waitMs));
+        return aiCallGemini(apiKey, parts, attempt + 1, onWait);
+      }
+      const detail = body && body.error && body.error.message ? body.error.message : "";
+      return { ok: false, error: "リクエスト制限(429)に当たりました。しばらく待つか、Google AI Studio で利用量と請求先残高を確認してください。" + (detail ? "\n詳細: " + detail : "") };
     }
     const json = await res.json().catch(() => null);
     if (res.status !== 200) {
@@ -4245,9 +4265,16 @@ async function aiRunBatchLoop(normKeys, chunkSize, buildParts, onProgress) {
     const chunkNorms = chunks[i];
     if (onProgress) onProgress(`${i + 1}/${chunks.length} バッチ処理中…`);
 
+    // 直前のチャンクから間を空ける（連続送信でレート制限を踏まないため）
+    if (i > 0) {
+      await new Promise(r => setTimeout(r, AI_CHUNK_INTERVAL_MS));
+    }
+
     const parts = await buildParts(chunkNorms);
-    let parsed = await aiCallGemini(apiKey, parts);
-    if (!parsed.ok) parsed = await aiCallGemini(apiKey, parts); // 同一エラーへの再試行は1回だけ
+    // 429は aiCallGemini 側が段階的に待って自力で粘るので、ここでは重ねて再試行しない。
+    const parsed = await aiCallGemini(apiKey, parts, 0, (sec, n, max) => {
+      if (onProgress) onProgress(`${i + 1}/${chunks.length} 混雑のため${sec}秒待機中…（${n}/${max}回目）`);
+    });
 
     chunkOutcomes.push({ norms: chunkNorms, parsed });
   }
@@ -4279,6 +4306,7 @@ async function aiRunTagging(options) {
   let successCount = 0;
   const totalCount = options.normKeys.length;
   const failedNorms = [];
+  const errors = [];
   // DEBUG: 「AIが何個返して、検証で何個落ちたか」を記録する。
   // 候補が18個に満たない原因が (a) AIが出していない のか (b) 公式リスト外で捨てている のかを切り分ける。
   const dropLog = [];
@@ -4288,6 +4316,9 @@ async function aiRunTagging(options) {
 
     if (!outcome.parsed.ok) {
       failedNorms.push.apply(failedNorms, targets.map(t => t.norm));
+      if (outcome.parsed.error && errors.indexOf(outcome.parsed.error) === -1) {
+        errors.push(outcome.parsed.error);
+      }
       continue;
     }
 
@@ -4362,7 +4393,7 @@ async function aiRunTagging(options) {
     window.aiLastDropLog = dropLog; // あとから copy(aiLastDropLog) で取り出せる
   }
 
-  return { successCount, totalCount, failedNorms };
+  return { successCount, totalCount, failedNorms, errors };
 }
 
 // --- 穴埋めモード: 既存タグは残したまま、目標数に足りない分だけをAIに追加させる。
@@ -4442,11 +4473,13 @@ async function aiRunFillIn(options) {
     saveState();
   }
 
-  return { successCount, totalCount, failedNorms };
+  return { successCount, totalCount, failedNorms, errors };
 }
 
 // --- モーダルUI ---
+let aiAutoCloseTimer = null;
 function aiOpenTaggingModal() {
+  if (aiAutoCloseTimer) { clearTimeout(aiAutoCloseTimer); aiAutoCloseTimer = null; }
   const imageCount = Object.keys(stickerImages).length;
   if (imageCount === 0) {
     alert('画像が読み込まれていません。先にZIP/PNGアップロードしてください。');
@@ -4485,6 +4518,14 @@ function aiShowResult(result) {
   if (result.failedNorms.length > 0) {
     msg += `\n未処理: ${result.failedNorms.length}枚（もう一度「AIでタグ付け」を押すと、空のコマだけ続きから再開できます）`;
   }
+  // 失敗したときは理由を必ず出す。出さないと「なぜか付かない」としか分からない。
+  if (result.errors && result.errors.length > 0) {
+    msg += `\n\n失敗した理由:\n${result.errors.join("\n")}`;
+  }
+  const failed = result.failedNorms.length > 0;
+  el.style.background = failed ? "#fdf1e7" : "#eef8ee";
+  el.style.borderColor = failed ? "#e0b48c" : "#b8dfc0";
+  el.style.color = failed ? "#8a4a1c" : "#2d6a3f";
   el.textContent = msg;
 }
 
@@ -4500,7 +4541,7 @@ async function aiHandleStartTagging() {
 
   const mode = document.querySelector('input[name="ai-tag-mode"]:checked').value; // 'fill' | 'all'
   const allowAutosuggest = document.getElementById('ai-tag-context-sticker').checked;
-  const chunkSize = Math.max(1, parseInt(document.getElementById('ai-tag-chunk-size').value, 10) || 15);
+  const chunkSize = AI_CHUNK_SIZE;
   const index = aiBuildStickerIndex();
   const perStickerTarget = Math.max(1, 9 - state.userMustTags.length);
   const mustTags = state.userMustTags.slice();
@@ -4567,6 +4608,14 @@ async function aiHandleStartTagging() {
     aiUpdateProgress('完了');
     aiShowResult(result);
     aiUpdateTargetSummary(); // 完了直後の「対象」表示を最新のstate.tagsに合わせて更新する
+    // 全部成功したらモーダルを閉じる（終わったのに「実行」を押してしまうのを防ぐ）。
+    // 失敗が混じっているときは理由を読ませたいので開いたままにする。
+    if (result.failedNorms.length === 0) {
+      aiAutoCloseTimer = setTimeout(function () {
+        const dlg = document.getElementById('ai-tagging-modal');
+        if (dlg && dlg.open) dlg.close();
+      }, 1200);
+    }
   } catch (e) {
     alert('AIタグ付け中にエラーが発生しました: ' + e.message);
   } finally {
