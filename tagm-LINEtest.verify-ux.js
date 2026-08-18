@@ -26,7 +26,7 @@ function aiOnly(handler, counter) {
 function boot(fetchImpl) {
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'http://localhost/t.html', pretendToBeVisual: true,
-    beforeParse(w) { w.fetch = fetchImpl; w.indexedDB = undefined; }
+    beforeParse(w) { w.fetch = fetchImpl; w.indexedDB = undefined; w.alert = m => { w.__lastAlert = m; }; }
   });
   return dom.window;
 }
@@ -150,6 +150,41 @@ const okBody = keys => ({
     // ブラウザは #fdf1e7 を rgb(253, 241, 231) に正規化するので両方許容する
     const bg = w.document.getElementById('ai-tag-result').style.background;
     check('結果欄が警告色になる', /fdf1e7|253,\s*241,\s*231/.test(bg), bg);
+    w.close();
+  }
+
+  console.log('=== 7. 穴埋めモード（不足分だけ補う） ===');
+  {
+    const w = await ready(boot(aiOnly(async () => ({ status: 200, json: async () => okBody(['1','2']) }), { n: 0 })));
+    stub(w);
+    w.eval('aiBuildStickerIndex = function(){ return {'
+      + ' "1": {writeKey:"1", hasImage:true, existingTags:["大丈夫","連絡","OK"]},'
+      + ' "2": {writeKey:"2", hasImage:true, existingTags:new Array(9).fill(0).map(function(_,i){return "t"+i;})} }; }');
+    w.document.getElementById('ai-tagging-modal').showModal();
+    w.eval('document.getElementById("ai-tag-mode-fill").checked = true;');
+    let threw = null;
+    try { await w.eval('aiHandleStartTagging()'); } catch (e) { threw = e.message; }
+    check('穴埋め実行で例外が出ない', !threw, threw);
+    check('errors is not defined のアラートが出ない',
+      !(w.__lastAlert && /errors is not defined/.test(w.__lastAlert)), w.__lastAlert);
+    check('アラート自体が出ない', !w.__lastAlert, w.__lastAlert);
+    w.close();
+  }
+
+  console.log('=== 8. 穴埋めモードでも失敗理由が出る ===');
+  {
+    const w = await ready(boot(aiOnly(async () => ({ status: 429, json: async () => ({ error: { message: 'Quota exceeded (fill)', details: [] } }) }), { n: 0 })));
+    stub(w);
+    w.eval('aiBuildStickerIndex = function(){ return { "1": {writeKey:"1", hasImage:true, existingTags:["大丈夫"]} }; }');
+    w.eval('__realST = setTimeout; setTimeout = function(f, ms){ if(ms>=1000){ return __realST(f,0);} return __realST(f,ms); };');
+    w.document.getElementById('ai-tagging-modal').showModal();
+    w.eval('document.getElementById("ai-tag-mode-fill").checked = true;');
+    let threw = null;
+    try { await w.eval('aiHandleStartTagging()'); } catch (e) { threw = e.message; }
+    check('穴埋めの失敗でも例外が出ない', !threw, threw);
+    const txt = w.document.getElementById('ai-tag-result').textContent;
+    check('穴埋めでも失敗理由が画面に出る', /失敗した理由/.test(txt), txt.slice(0,160));
+    check('穴埋めでもサーバ原文が出る', /Quota exceeded/.test(txt), txt.slice(0,160));
     w.close();
   }
 

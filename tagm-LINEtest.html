@@ -4431,10 +4431,14 @@ async function aiRunFillIn(options) {
   let successCount = 0;
   const totalCount = normKeys.length;
   const failedNorms = [];
+  const errors = [];
 
   for (const outcome of loopResult.chunkOutcomes) {
     if (!outcome.parsed.ok) {
       failedNorms.push.apply(failedNorms, outcome.norms);
+      if (outcome.parsed.error && errors.indexOf(outcome.parsed.error) === -1) {
+        errors.push(outcome.parsed.error);
+      }
       continue;
     }
 
