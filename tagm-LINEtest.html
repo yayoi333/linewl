@@ -4216,7 +4216,9 @@ async function aiCallGemini(apiKey, parts, attempt, onWait) {
         }
       })
     });
-    if (res.status === 429) {
+    // 429 = 呼びすぎ、5xx = サーバ側の一時的な不調・混雑。どちらも「待てば直る」種類なので
+    // 同じ段階的バックオフで粘る。ここで諦めると「高需要です」の一言で終わってしまう。
+    if (res.status === 429 || res.status >= 500) {
       const body = await res.json().catch(() => null);
       // Google APIは RetryInfo で「何秒後なら良いか」を返すことがある。あればそれに従う。
       let waitMs = AI_RETRY_WAITS_MS[attempt] || 0;
@@ -4228,17 +4230,20 @@ async function aiCallGemini(apiKey, parts, attempt, onWait) {
         }
       }
       if (attempt < AI_RETRY_WAITS_MS.length) {
-        if (onWait) onWait(Math.round(waitMs / 1000), attempt + 1, AI_RETRY_WAITS_MS.length);
+        if (onWait) onWait(Math.round(waitMs / 1000), attempt + 1, AI_RETRY_WAITS_MS.length, res.status);
         await new Promise(r => setTimeout(r, waitMs));
         return aiCallGemini(apiKey, parts, attempt + 1, onWait);
       }
       const detail = body && body.error && body.error.message ? body.error.message : "";
-      return { ok: false, error: "リクエスト制限(429)に当たりました。しばらく待つか、Google AI Studio で利用量と請求先残高を確認してください。" + (detail ? "\n詳細: " + detail : "") };
+      const head = res.status === 429
+        ? "リクエスト制限(429)に当たりました。しばらく待つか、Google AI Studio で利用量と請求先残高を確認してください。"
+        : "モデル側が混雑しています(HTTP " + res.status + ")。合計" + Math.round(AI_RETRY_WAITS_MS.reduce(function (a, b) { return a + b; }, 0) / 1000) + "秒待って再試行しましたが復旧しませんでした。少し時間をおいて実行してください。";
+      return { ok: false, error: head + (detail ? "\n詳細: " + detail : "") };
     }
     const json = await res.json().catch(() => null);
     if (res.status !== 200) {
-      const msg = json && json.error && json.error.message ? json.error.message : ('HTTP ' + res.status);
-      return { ok: false, error: msg };
+      const msg = json && json.error && json.error.message ? json.error.message : '';
+      return { ok: false, error: 'HTTP ' + res.status + (msg ? ': ' + msg : '') };
     }
     const text = (json && json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts)
       ? json.candidates[0].content.parts.map(p => p.text || '').join('')
@@ -4272,8 +4277,9 @@ async function aiRunBatchLoop(normKeys, chunkSize, buildParts, onProgress) {
 
     const parts = await buildParts(chunkNorms);
     // 429は aiCallGemini 側が段階的に待って自力で粘るので、ここでは重ねて再試行しない。
-    const parsed = await aiCallGemini(apiKey, parts, 0, (sec, n, max) => {
-      if (onProgress) onProgress(`${i + 1}/${chunks.length} 混雑のため${sec}秒待機中…（${n}/${max}回目）`);
+    const parsed = await aiCallGemini(apiKey, parts, 0, (sec, n, max, status) => {
+      const why = status === 429 ? '呼び出し制限' : 'モデル混雑';
+      if (onProgress) onProgress(`${i + 1}/${chunks.length} ${why}のため${sec}秒待機中…（${n}/${max}回目）`);
     });
 
     chunkOutcomes.push({ norms: chunkNorms, parsed });

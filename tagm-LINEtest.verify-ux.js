@@ -188,6 +188,35 @@ const okBody = keys => ({
     w.close();
   }
 
+  console.log('=== 9. 503（モデル混雑）でも待って再試行する ===');
+  {
+    const ctr = { n: 0 };
+    const w = await ready(boot(aiOnly(async (n) => {
+      if (n <= 2) return { status: 503, json: async () => ({ error: { message: 'This model is currently experiencing high demand.' } }) };
+      return { status: 200, json: async () => okBody(['1','2']) };
+    }, ctr)));
+    stub(w);
+    w.eval('__realST = setTimeout; setTimeout = function(f, ms){ if(ms>=1000){ __waits.push(ms); return __realST(f,0);} return __realST(f,ms); }; __waits = [];');
+    const res = await w.eval('aiRunTagging({ normKeys:["1","2"], chunkSize:8, perStickerCount:9, allowAutosuggest:false, mustTags:[], writeKeyOf:function(n){return n;}, onProgress:function(){} })');
+    check('503を2回受けても3回目で成功する', res.successCount === 2, JSON.stringify(res.errors || res));
+    check('503でも 8s→20s と待つ', JSON.stringify(w.eval('__waits').slice(0,2)) === JSON.stringify([8000,20000]), JSON.stringify(w.eval('__waits')));
+    w.close();
+  }
+
+  console.log('=== 10. 503が続いたら理由を混雑として説明する ===');
+  {
+    const ctr = { n: 0 };
+    const w = await ready(boot(aiOnly(async () => ({ status: 503, json: async () => ({ error: { message: 'This model is currently experiencing high demand.' } }) }), ctr)));
+    stub(w);
+    w.eval('__realST = setTimeout; setTimeout = function(f, ms){ if(ms>=1000){ return __realST(f,0);} return __realST(f,ms); };');
+    const res = await w.eval('aiRunTagging({ normKeys:["1"], chunkSize:8, perStickerCount:9, allowAutosuggest:false, mustTags:[], writeKeyOf:function(n){return n;}, onProgress:function(){} })');
+    check('503も4回試す（初回+3リトライ）', ctr.n === 4, 'got ' + ctr.n);
+    check('説明が「混雑」になる（429と誤解させない）', res.errors[0].indexOf('混雑しています(HTTP 503)') !== -1, res.errors[0]);
+    check('429の文言は出ない', res.errors[0].indexOf('リクエスト制限(429)') === -1, res.errors[0]);
+    check('サーバの原文も残る', /high demand/.test(res.errors[0]), res.errors[0]);
+    w.close();
+  }
+
   console.log('\n' + (fails === 0 ? 'ALL PASS' : fails + ' FAILED'));
   process.exit(fails === 0 ? 0 : 1);
 })();
