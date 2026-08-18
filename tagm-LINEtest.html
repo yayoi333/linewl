@@ -4103,13 +4103,43 @@ function aiValidateTagForContext(tag, allowAutosuggest) {
 // 先頭 perStickerCount 個が自動採用され、残りが差し替え候補になる（LINE公式の「おすすめのタグ」が
 // 常に18個提示 → そこから9個選ばせる、という実測仕様に合わせている）。
 const AI_CANDIDATE_MAX = 18;
+
+// 思考予算。0 だと 608 語のタグリストと突き合わせながら選ぶ余裕が無く、
+// 「笑顔（正しくは にっこり）」のようなリスト外の語を作ってしまう。
+// -1 = モデルが必要量を自動で決める / 0 = 無効 / 正の整数 = トークン数上限。
+const AI_THINKING_BUDGET = -1;
 function aiGetCandidateCount(perStickerCount) {
   return Math.max(perStickerCount, Math.min(AI_CANDIDATE_MAX, perStickerCount * 2));
 }
 
+// AIが実際に作ってしまった「リストに無い語 → 正しい公式タグ」の実測ペア。
+// タグリストは稀に更新されるので、ベタ書きせず毎回検算する:
+//   ・正しい側が今のリストから消えた → その行は無意味なので出さない
+//   ・間違い側が公式タグに昇格した   → もう間違いではないので出さない
+// これでタグリストが変わっても指示文が嘘をつかない（保守不要）。
+const AI_NEAR_MISS_PAIRS = [
+  ['笑顔', 'にっこり'],
+  ['お疲れ様', 'おつかれさま'],
+  ['大好き', '好き'],
+  ['連絡する', '連絡'],
+  ['間違い', '間違いない']
+];
+function aiBuildNearMissExamples(pool) {
+  const set = new Set(pool);
+  return AI_NEAR_MISS_PAIRS
+    .filter(pair => set.has(pair[1]) && !set.has(pair[0]))
+    .map(pair => '「' + pair[0] + '」は無い（正しくは「' + pair[1] + '」）');
+}
+
 function aiBuildTaggingInstruction(perStickerCount, mustTags, allowAutosuggest) {
-  const tagListStr = aiGetTagPool(allowAutosuggest).join('、');
+  const pool = aiGetTagPool(allowAutosuggest);
+  const tagListStr = pool.join('、');
   const candidateCount = aiGetCandidateCount(perStickerCount);
+  const nearMiss = aiBuildNearMissExamples(pool);
+  const nearMissNote = nearMiss.length > 0
+    ? '\n・「意味は合っているがリストに無い語」を作りがちなので特に注意すること。実際にあった間違い: '
+      + nearMiss.join('、') + '。'
+    : '';
   const mustTagsNote = mustTags.length > 0
     ? `\n・次のタグは既に全コマへ自動付与されているので、絶対に選ばないでください: ${mustTags.join('、')}`
     : '';
@@ -4124,7 +4154,7 @@ ${candidateCount}個の内訳の目安:
 1. 直訳（2〜3個）画像内の文字をそのままタグ化する。略語・くだけた表記は展開すること（例:「おは」→おはよう /「いてら」→いってらっしゃい /「たす」→助かる /「はらへ」→空腹・ごはん /「しょぼん」→しょんぼり）
 2. 言い換え（4〜6個）同じ意味・同じ場面で使う別の言葉
 3. 相手が打つ言葉（2〜3個）このスタンプを受け取る側や、催促する側が入力しそうな語（例:「今は返信できません」→ 既読・未読・まだ？・おーい /「連絡します」→ 待ってる・おまたせ）
-4. 絵柄から（2〜3個）画像に写っているモノ・ポーズ・動作（例: 時計→もうすぐ着く / カバン→出かける・出勤 / 走っている→急ぐ・ダッシュ / マグカップ→休憩・飲む）
+4. 絵柄から（2〜3個）画像に写っているモノ・ポーズ・動作。ただし**モノの名前をそのままタグにしないこと**。リストに載っているモノの名前は季節（春・夏・秋・冬・年末年始）と動物のカテゴリだけで、それ以外の日用品・場所・一般名詞は登録されていない。「そのモノを見た人がトーク画面で打つ言葉」に変換すること（例: 時計→もうすぐ着く / カバン→出かける・出勤 / 走っている→急ぐ・ダッシュ / マグカップ→休憩・飲む / 浮き輪→泳ぐ / ベッド→寝る・おやすみ / 夜空→こんばんは）
 5. 感情・反応（2〜3個）表情から読み取れる気持ち
 6. 定番（2〜3個）そのスタンプが使われる場面でよく打たれる汎用語
 
@@ -4136,6 +4166,7 @@ ${candidateCount}個の内訳の目安:
 
 最重要ルール:
 ・タグは必ず使用可能タグリストの中から完全一致で選ぶこと。リストに無い語は、意味がどれだけ近くても出力しないこと（創作タグは禁止）。逆に、リストに載っている語であれば、言い換え・略語の展開・意訳の結果として選んでよい。
+・出力する前に、選んだ語を1つずつ、使用可能タグリストに一字一句そのままの形で載っているか確認すること。送り仮名・漢字とひらがなの違い・活用形の違いも、1文字でも違えば「無い」とみなして捨て、リストに載っている表記に置き換えるか、別の語を選び直すこと。${nearMissNote}
 ・1枚につき必ず${candidateCount}個。同じ画像内でタグを重複させないこと。
 ・確信度の高い順に並べること。並び順に意味がある。
 ・「番号: NN」というテキストの直後に続く画像が、その番号に対応する画像です。${mustTagsNote}
@@ -4176,7 +4207,7 @@ async function aiCallGemini(apiKey, parts, allowRetry429) {
         generationConfig: {
           responseMimeType: 'application/json',
           temperature: 0.2,
-          thinkingConfig: { thinkingBudget: 0 }
+          thinkingConfig: { thinkingBudget: AI_THINKING_BUDGET }
         }
       })
     });
