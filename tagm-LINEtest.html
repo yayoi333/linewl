@@ -4103,16 +4103,23 @@ const AI_CANDIDATE_MAX = 18;
 // 1リクエストにまとめて送る画像の枚数。ユーザーに選ばせない。
 // 少なすぎるとリクエスト数が増えてレート制限に当たりやすく、
 // 多すぎると1回の失敗で失う枚数が増え、1リクエストも長くなる。
-const AI_CHUNK_SIZE = 8;
+// 無料枠は「1分あたりのリクエスト数(実測20)」が最も厳しい制約なので、回数を増やさない
+// ことを最優先する。LINEのスタンプは最大40個なので、40なら1セットが常に1リクエスト。
+const AI_CHUNK_SIZE = 40;
 // チャンクとチャンクの間に必ず置く待ち時間(ms)。連続送信でレート制限を踏まないため。
 const AI_CHUNK_INTERVAL_MS = 3000;
 // 429を受けたときの待ち時間(ms)。順に伸ばす。使い切ったら諦める。
+// リトライは無料枠を食いつぶす。チャンクごとに数えると掛け算で膨らむので、
+// 実行全体で許す「追加リクエスト数」として絞る。
+const AI_RETRY_BUDGET = 2;
 const AI_RETRY_WAITS_MS = [8000, 20000, 45000];
 
 // 思考予算。0 だと 608 語のタグリストと突き合わせながら選ぶ余裕が無く、
 // 「笑顔（正しくは にっこり）」のようなリスト外の語を作ってしまう。
 // -1 = モデルが必要量を自動で決める / 0 = 無効 / 正の整数 = トークン数上限。
-const AI_THINKING_BUDGET = -1;
+// 無料枠ではトークンを増やすほど混雑・制限に当たりやすいので 0（無効）にする。
+// 課金枠なら -1（モデルが必要量を自動決定）にすると照合精度が上がる可能性がある。
+const AI_THINKING_BUDGET = 0;
 function aiGetCandidateCount(perStickerCount) {
   return Math.max(perStickerCount, Math.min(AI_CANDIDATE_MAX, perStickerCount * 2));
 }
@@ -4201,8 +4208,10 @@ function aiBuildFillInInstruction(allowAutosuggest) {
 }
 
 // --- Gemini呼び出し（429は5秒待って1回だけ再試行） ---
-async function aiCallGemini(apiKey, parts, attempt, onWait) {
+// budget: { left: 残りリトライ回数 }。実行全体で共有する。
+async function aiCallGemini(apiKey, parts, attempt, onWait, budget) {
   attempt = attempt || 0;
+  budget = budget || { left: AI_RETRY_BUDGET };
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
@@ -4229,10 +4238,24 @@ async function aiCallGemini(apiKey, parts, attempt, onWait) {
           if (m) waitMs = Math.max(waitMs, Math.ceil(parseFloat(m[1]) * 1000) + 1000);
         }
       }
-      if (attempt < AI_RETRY_WAITS_MS.length) {
+      // 無料枠の上限に当たった場合、同じ1分のうちは何度叩いても通らない。
+      // 叩くほど枠を食うので、実行全体を止めて「何秒待てばよいか」を伝える。
+      const isQuota = /quota/i.test((body && body.error && body.error.message) || '');
+      if (isQuota) {
+        const sec = Math.ceil(waitMs / 1000);
+        return {
+          ok: false,
+          fatal: true,
+          // サーバの原文は原因特定に直結する（free_tier か、上限がいくつか等）ので必ず残す
+          error: '無料枠の上限（1分あたりのリクエスト数）に達しました。約' + sec + '秒待ってから、もう一度実行してください。'
+            + ((body && body.error && body.error.message) ? '\n詳細: ' + body.error.message : '')
+        };
+      }
+      if (attempt < AI_RETRY_WAITS_MS.length && budget.left > 0) {
+        budget.left--;
         if (onWait) onWait(Math.round(waitMs / 1000), attempt + 1, AI_RETRY_WAITS_MS.length, res.status);
         await new Promise(r => setTimeout(r, waitMs));
-        return aiCallGemini(apiKey, parts, attempt + 1, onWait);
+        return aiCallGemini(apiKey, parts, attempt + 1, onWait, budget);
       }
       const detail = body && body.error && body.error.message ? body.error.message : "";
       const head = res.status === 429
@@ -4264,6 +4287,8 @@ async function aiRunBatchLoop(normKeys, chunkSize, buildParts, onProgress) {
   if (!apiKey) return { aborted: true };
 
   const chunks = aiChunkArray(normKeys, chunkSize);
+  // リトライ予算は実行全体で共有する（チャンクごとにリセットしない）
+  const budget = { left: AI_RETRY_BUDGET };
   const chunkOutcomes = [];
 
   for (let i = 0; i < chunks.length; i++) {
@@ -4280,9 +4305,17 @@ async function aiRunBatchLoop(normKeys, chunkSize, buildParts, onProgress) {
     const parsed = await aiCallGemini(apiKey, parts, 0, (sec, n, max, status) => {
       const why = status === 429 ? '呼び出し制限' : 'モデル混雑';
       if (onProgress) onProgress(`${i + 1}/${chunks.length} ${why}のため${sec}秒待機中…（${n}/${max}回目）`);
-    });
+    }, budget);
 
     chunkOutcomes.push({ norms: chunkNorms, parsed });
+
+    // 枠切れなど「続けても無駄」な失敗は、残りのチャンクを叩かずに打ち切る。
+    if (parsed.fatal) {
+      for (let k = i + 1; k < chunks.length; k++) {
+        chunkOutcomes.push({ norms: chunks[k], parsed: { ok: false, error: parsed.error } });
+      }
+      break;
+    }
   }
 
   return { aborted: false, chunkOutcomes };

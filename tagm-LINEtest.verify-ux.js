@@ -64,7 +64,7 @@ const okBody = keys => ({
   {
     const w = await ready(boot(() => Promise.reject(new Error('offline'))));
     const ev = c => w.eval(c);
-    check('AI_CHUNK_SIZE = 8', ev('AI_CHUNK_SIZE') === 8, 'got ' + ev('AI_CHUNK_SIZE'));
+    check('AI_CHUNK_SIZE = 40（無料枠向け）', ev('AI_CHUNK_SIZE') === 40, 'got ' + ev('AI_CHUNK_SIZE'));
     check('チャンク間の待機 3000ms', ev('AI_CHUNK_INTERVAL_MS') === 3000);
     check('リトライ待ちが3段階', ev('AI_RETRY_WAITS_MS.length') === 3, JSON.stringify(ev('AI_RETRY_WAITS_MS')));
     check('入力欄がDOMから消えている', w.document.getElementById('ai-tag-chunk-size') === null);
@@ -76,18 +76,18 @@ const okBody = keys => ({
   {
     const ctr = { n: 0 };
     const w = await ready(boot(aiOnly(async () =>
-      ({ status: 429, json: async () => ({ error: { message: 'Quota exceeded', details: [] } }) }), ctr)));
+      ({ status: 429, json: async () => ({ error: { message: 'Too many requests, slow down', details: [] } }) }), ctr)));
     stub(w);
     // setTimeout を乗っ取って「何ms待とうとしたか」を記録し、実際には待たない
     w.eval('__realST = setTimeout; setTimeout = function(f, ms){ if(ms>=1000){ __waits.push(ms); return __realST(f,0);} return __realST(f,ms); }; __waits = [];');
     const res = await w.eval('aiRunTagging({ normKeys:["1","2"], chunkSize:8, perStickerCount:9, allowAutosuggest:false, mustTags:[], writeKeyOf:n=>n, onProgress:()=>{} })');
     const recorded = w.eval('__waits');
-    check('AI呼び出しは4回（初回+3リトライ）', ctr.n === 4, 'got ' + ctr.n);
-    check('待ち時間が 8s→20s→45s と伸びる',
-      JSON.stringify(recorded.slice(0, 3)) === JSON.stringify([8000, 20000, 45000]), JSON.stringify(recorded));
+    check('AI呼び出しは3回（初回+リトライ予算2）', ctr.n === 3, 'got ' + ctr.n);
+    check('待ち時間が 8s→20s と伸びる',
+      JSON.stringify(recorded.slice(0, 2)) === JSON.stringify([8000, 20000]), JSON.stringify(recorded));
     check('失敗理由が返る', !!(res.errors && res.errors.length), JSON.stringify(res.errors));
     check('理由に429の説明が入る', /429/.test(res.errors[0]), res.errors[0]);
-    check('理由にサーバの原文が入る', /Quota exceeded/.test(res.errors[0]), res.errors[0]);
+    check('理由にサーバの原文が入る', /slow down/.test(res.errors[0]), res.errors[0]);
     w.close();
   }
 
@@ -210,10 +210,64 @@ const okBody = keys => ({
     stub(w);
     w.eval('__realST = setTimeout; setTimeout = function(f, ms){ if(ms>=1000){ return __realST(f,0);} return __realST(f,ms); };');
     const res = await w.eval('aiRunTagging({ normKeys:["1"], chunkSize:8, perStickerCount:9, allowAutosuggest:false, mustTags:[], writeKeyOf:function(n){return n;}, onProgress:function(){} })');
-    check('503も4回試す（初回+3リトライ）', ctr.n === 4, 'got ' + ctr.n);
+    check('503は3回試す（初回+リトライ予算2）', ctr.n === 3, 'got ' + ctr.n);
     check('説明が「混雑」になる（429と誤解させない）', res.errors[0].indexOf('混雑しています(HTTP 503)') !== -1, res.errors[0]);
     check('429の文言は出ない', res.errors[0].indexOf('リクエスト制限(429)') === -1, res.errors[0]);
     check('サーバの原文も残る', /high demand/.test(res.errors[0]), res.errors[0]);
+    w.close();
+  }
+
+  console.log('=== 11. 無料枠向けの既定値 ===');
+  {
+    const w = await ready(boot(aiOnly(async () => ({ status: 200, json: async () => okBody(['1']) }), { n: 0 })));
+    check('チャンクは40', w.eval('AI_CHUNK_SIZE') === 40, 'got ' + w.eval('AI_CHUNK_SIZE'));
+    check('思考予算は0', w.eval('AI_THINKING_BUDGET') === 0, 'got ' + w.eval('AI_THINKING_BUDGET'));
+    check('リトライ予算は2', w.eval('AI_RETRY_BUDGET') === 2, 'got ' + w.eval('AI_RETRY_BUDGET'));
+    w.close();
+  }
+
+  console.log('=== 12. 40枚以下は必ず1リクエスト ===');
+  {
+    for (const total of [8, 16, 24, 40]) {
+      const ctr = { n: 0 };
+      const keys = Array.from({length: total}, (_, i) => String(i+1));
+      const w = await ready(boot(aiOnly(async () => ({ status: 200, json: async () => okBody(keys) }), ctr)));
+      stub(w);
+      await w.eval("__X__".replace('__X__','')||'0');
+      await w.eval('aiRunTagging({ normKeys:' + JSON.stringify(keys) + ', chunkSize:AI_CHUNK_SIZE, perStickerCount:9, allowAutosuggest:false, mustTags:[], writeKeyOf:function(n){return n;}, onProgress:function(){} })');
+      check(total + '枚 → 1リクエスト', ctr.n === 1, 'got ' + ctr.n);
+      w.close();
+    }
+  }
+
+  console.log('=== 13. リトライ予算は実行全体で共有される ===');
+  {
+    const ctr = { n: 0 };
+    const keys = Array.from({length: 80}, (_, i) => String(i+1));
+    const w = await ready(boot(aiOnly(async () => ({ status: 503, json: async () => ({ error: { message: 'high demand' } }) }), ctr)));
+    stub(w);
+    w.eval('__realST = setTimeout; setTimeout = function(f, ms){ if(ms>=1000){ return __realST(f,0);} return __realST(f,ms); };');
+    await w.eval('aiRunTagging({ normKeys:' + JSON.stringify(keys) + ', chunkSize:AI_CHUNK_SIZE, perStickerCount:9, allowAutosuggest:false, mustTags:[], writeKeyOf:function(n){return n;}, onProgress:function(){} })');
+    check('80枚(2チャンク)全滅でも 4リクエストまで', ctr.n <= 4, 'got ' + ctr.n + '（予算2 + 初回2）');
+    w.close();
+  }
+
+  console.log('=== 14. 無料枠切れなら即中断して待ち時間を伝える ===');
+  {
+    const ctr = { n: 0 };
+    const keys = Array.from({length: 80}, (_, i) => String(i+1));
+    const w = await ready(boot(aiOnly(async () => ({ status: 429, json: async () => ({ error: {
+      message: 'You exceeded your current quota. Quota exceeded for metric: generate_content_free_tier_requests, limit: 20',
+      details: [{ retryDelay: '55s' }] } }) }), ctr)));
+    stub(w);
+    w.eval('__realST = setTimeout; setTimeout = function(f, ms){ if(ms>=1000){ return __realST(f,0);} return __realST(f,ms); };');
+    const res = await w.eval('aiRunTagging({ normKeys:' + JSON.stringify(keys) + ', chunkSize:AI_CHUNK_SIZE, perStickerCount:9, allowAutosuggest:false, mustTags:[], writeKeyOf:function(n){return n;}, onProgress:function(){} })');
+    check('枠切れなら1リクエストで止める', ctr.n === 1, 'got ' + ctr.n);
+    check('2つ目のチャンクを叩きに行かない', ctr.n < 2, 'got ' + ctr.n);
+    check('全80枚が未処理として報告される', res.failedNorms.length === 80, 'got ' + res.failedNorms.length);
+    check('待つべき秒数が案内される', res.errors[0].indexOf('56秒') !== -1 || /約d+秒待って/.test(res.errors[0]), res.errors[0]);
+    check('無料枠だと明記される', res.errors[0].indexOf('無料枠の上限') !== -1, res.errors[0]);
+    check('枠切れでもサーバ原文が残る', res.errors[0].indexOf('free_tier_requests') !== -1, res.errors[0]);
     w.close();
   }
 
