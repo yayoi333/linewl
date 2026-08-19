@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
-const SRC = path.join(__dirname, 'tagm-LINEtest.html');
+const SRC = path.join(__dirname, 'tagmLAI.html');
 const html = fs.readFileSync(SRC, 'utf8');
 const tagsJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'tags_sticker_latest.json'), 'utf8'));
 const POOL = [];

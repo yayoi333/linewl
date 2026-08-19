@@ -65,9 +65,9 @@ LINEと同じく **候補を多めに出して、そこからユーザーが選�
 
 ---
 
-## 3. 実装（tagm-LINEtest.html）
+## 3. 実装（tagmLAI.html）
 
-`tagm-test.html` は別作業で使用中のため触らない。**LINE対応版は `tagm-LINEtest.html`。**
+`tagm-test.html` は別作業で使用中のため触らない。**LINE対応版は `tagmLAI.html`。**
 （tagm-test.html は 159,446 バイトの元の状態に復元済み・バイト一致確認済み）
 
 ### 変更点
@@ -164,7 +164,7 @@ AI応答が目標未満だったのは 0枚
 
 ### 論点3: tagm.html への移植
 
-tagm-LINEtest.html で固まったら本体へ。未着手。
+tagmLAI.html で固まったら本体へ。未着手。
 
 ---
 
@@ -173,7 +173,7 @@ tagm-LINEtest.html で固まったら本体へ。未着手。
 ```bash
 # ローカルで開く（file:// だと localStorage が使えないので http で出す）
 python -m http.server 8778 --bind 127.0.0.1
-# → http://localhost:8778/tagm-LINEtest.html
+# → http://localhost:8778/tagmLAI.html
 ```
 
 - **tagm-test.html と同じポートで開かないこと。** 同一オリジンだと localStorage

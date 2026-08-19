@@ -1,9 +1,9 @@
-// tagm-LINEtest.html を jsdom で読み込み、AIおすすめタグ帯の挙動を検証する
+// tagmLAI.html を jsdom で読み込み、AIおすすめタグ帯の挙動を検証する
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
-const FILE = path.join(__dirname, 'tagm-LINEtest.html');
+const FILE = path.join(__dirname, 'tagmLAI.html');
 const html = fs.readFileSync(FILE, 'utf8');
 
 let fails = 0;
