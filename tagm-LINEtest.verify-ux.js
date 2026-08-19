@@ -125,7 +125,6 @@ const okBody = keys => ({
     stub(w);
     w.eval('aiBuildStickerIndex = function(){ return { "1": {writeKey:"1", hasImage:true, existingTags:[]}, "2": {writeKey:"2", hasImage:true, existingTags:[]} }; }');
     w.document.getElementById('ai-tagging-modal').showModal();
-    w.eval('document.getElementById("ai-tag-mode-all").checked = true;');
     await w.eval('aiHandleStartTagging()');
     check('成功直後はまだ開いている（結果を一瞬見せる）', w.document.getElementById('ai-tagging-modal').open);
     await new Promise(r => setTimeout(r, 1500));
@@ -140,7 +139,6 @@ const okBody = keys => ({
     w.eval('aiBuildStickerIndex = function(){ return { "1": {writeKey:"1", hasImage:true, existingTags:[]}, "2": {writeKey:"2", hasImage:true, existingTags:[]} }; }');
     w.eval('__realST = setTimeout; setTimeout = function(f, ms){ if(ms>=1000){ return __realST(f,0);} return __realST(f,ms); };');
     w.document.getElementById('ai-tagging-modal').showModal();
-    w.eval('document.getElementById("ai-tag-mode-all").checked = true;');
     await w.eval('aiHandleStartTagging()');
     await new Promise(r => setTimeout(r, 1500));
     check('失敗時はモーダルが開いたまま', w.document.getElementById('ai-tagging-modal').open);
@@ -153,38 +151,15 @@ const okBody = keys => ({
     w.close();
   }
 
-  console.log('=== 7. 穴埋めモード（不足分だけ補う） ===');
+  console.log('=== 7. 穴埋めモードが廃止されている ===');
   {
-    const w = await ready(boot(aiOnly(async () => ({ status: 200, json: async () => okBody(['1','2']) }), { n: 0 })));
-    stub(w);
-    w.eval('aiBuildStickerIndex = function(){ return {'
-      + ' "1": {writeKey:"1", hasImage:true, existingTags:["大丈夫","連絡","OK"]},'
-      + ' "2": {writeKey:"2", hasImage:true, existingTags:new Array(9).fill(0).map(function(_,i){return "t"+i;})} }; }');
-    w.document.getElementById('ai-tagging-modal').showModal();
-    w.eval('document.getElementById("ai-tag-mode-fill").checked = true;');
-    let threw = null;
-    try { await w.eval('aiHandleStartTagging()'); } catch (e) { threw = e.message; }
-    check('穴埋め実行で例外が出ない', !threw, threw);
-    check('errors is not defined のアラートが出ない',
-      !(w.__lastAlert && /errors is not defined/.test(w.__lastAlert)), w.__lastAlert);
-    check('アラート自体が出ない', !w.__lastAlert, w.__lastAlert);
-    w.close();
-  }
-
-  console.log('=== 8. 穴埋めモードでも失敗理由が出る ===');
-  {
-    const w = await ready(boot(aiOnly(async () => ({ status: 429, json: async () => ({ error: { message: 'Quota exceeded (fill)', details: [] } }) }), { n: 0 })));
-    stub(w);
-    w.eval('aiBuildStickerIndex = function(){ return { "1": {writeKey:"1", hasImage:true, existingTags:["大丈夫"]} }; }');
-    w.eval('__realST = setTimeout; setTimeout = function(f, ms){ if(ms>=1000){ return __realST(f,0);} return __realST(f,ms); };');
-    w.document.getElementById('ai-tagging-modal').showModal();
-    w.eval('document.getElementById("ai-tag-mode-fill").checked = true;');
-    let threw = null;
-    try { await w.eval('aiHandleStartTagging()'); } catch (e) { threw = e.message; }
-    check('穴埋めの失敗でも例外が出ない', !threw, threw);
-    const txt = w.document.getElementById('ai-tag-result').textContent;
-    check('穴埋めでも失敗理由が画面に出る', /失敗した理由/.test(txt), txt.slice(0,160));
-    check('穴埋めでもサーバ原文が出る', /Quota exceeded/.test(txt), txt.slice(0,160));
+    const w = await ready(boot(aiOnly(async () => ({ status: 200, json: async () => okBody(['1']) }), { n: 0 })));
+    const html = fs.readFileSync(SRC, 'utf8');
+    check('モード選択のラジオが無い', html.indexOf('ai-tag-mode') === -1);
+    check('aiRunFillIn が無い', html.indexOf('aiRunFillIn') === -1);
+    check('aiBuildFillInInstruction が無い', html.indexOf('aiBuildFillInInstruction') === -1);
+    check('aiGetTargetNormKeys は引数1つ', html.indexOf('function aiGetTargetNormKeys(index)') !== -1);
+    check('画像のあるコマを全部対象にする', w.eval('aiGetTargetNormKeys({a:{hasImage:true},b:{hasImage:false},c:{hasImage:true}}).length') === 2);
     w.close();
   }
 

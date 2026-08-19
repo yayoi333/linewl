@@ -1028,11 +1028,6 @@
     <label class="text-sm" style="color:#3a4d33;"><input type="radio" name="ai-tag-context" id="ai-tag-context-emoji" value="emoji" onchange="aiUpdateTargetSummary()"> 絵文字・アニメーション</label>
   </div>
 
-  <div class="mb-3">
-    <div class="text-xs mb-1 tracking-wider uppercase" style="color: #6b8060;">既存タグの扱い</div>
-    <label class="mr-4 text-sm" style="color:#3a4d33;"><input type="radio" name="ai-tag-mode" id="ai-tag-mode-fill" value="fill" onchange="aiUpdateTargetSummary()"> 不足分だけ補う</label>
-    <label class="text-sm" style="color:#3a4d33;"><input type="radio" name="ai-tag-mode" id="ai-tag-mode-all" value="all" checked onchange="aiUpdateTargetSummary()"> 全部上書き</label>
-  </div>
 
 
 
@@ -4013,12 +4008,10 @@ function aiBuildStickerIndex() {
   return index;
 }
 
-// mode: 'all' = 全コマ対象（既存タグは無視して丸ごと再生成） / それ以外(='fill') = 目標数に届いていないコマだけ
-function aiGetTargetNormKeys(mode, index) {
-  const perStickerTarget = Math.max(1, 9 - state.userMustTags.length);
+// 画像があるコマを対象にする（既存タグの有無は問わない。常に丸ごと付け直す）
+function aiGetTargetNormKeys(index) {
   return Object.keys(index)
     .filter(norm => index[norm].hasImage)
-    .filter(norm => mode === 'all' || index[norm].existingTags.length < perStickerTarget)
     .sort(aiNumericSort);
 }
 
@@ -4189,23 +4182,6 @@ ${candidateCount}個の内訳の目安:
 使用可能タグリスト: ${tagListStr}`;
 }
 
-// 「穴埋め」用の指示文。全コマ共通のヘッダーのみ組み立て、コマごとの不足数・除外タグは
-// 各画像の直前のテキストパート（aiRunFillIn内で構築）に個別に埋め込む。
-function aiBuildFillInInstruction(allowAutosuggest) {
-  const tagListStr = aiGetTagPool(allowAutosuggest).join('、');
-  return `あなたは「LINEスタンプ・絵文字 タグ付けメーカー」です。渡された画像には既にいくつかタグが付いていますが、目標の個数に足りていません。画像ごとに指定される「不足数」の分だけ、新しいタグを追加してください。
-最重要ルール:
-・タグは必ず使用可能タグリストの中から完全一致で選ぶこと。創作タグは禁止。
-・出力するのは、その番号へ新しく追加する分のタグだけ。「既存タグ」と「除外タグ」に書かれているものは絶対に選ばないこと。
-・新しく追加するタグ同士も重複させないこと。
-・選定観点: キャラクター / 表情 / 感情 / 動作 / あいさつ / 返事 / 使いどころ / 雰囲気 / デザイン上の特徴
-・「番号: NN」から始まるブロックの直後に続く画像が、そのブロックに対応する画像です。
-
-出力形式は次のJSONのみ。説明文やコードブロック記法は一切含めないこと。値は追加分のタグだけの配列にすること:
-{"01": ["追加タグ1","追加タグ2"], "02": [...]}
-
-使用可能タグリスト: ${tagListStr}`;
-}
 
 // --- Gemini呼び出し（429は5秒待って1回だけ再試行） ---
 // budget: { left: 残りリトライ回数 }。実行全体で共有する。
@@ -4435,89 +4411,6 @@ async function aiRunTagging(options) {
   return { successCount, totalCount, failedNorms, errors };
 }
 
-// --- 穴埋めモード: 既存タグは残したまま、目標数に足りない分だけをAIに追加させる。
-//     ユーザーが手動削除したタグ（state.aiRejectedTags）は除外リストとして毎回渡すので、
-//     同じ提案が繰り返されない。 ---
-// options: { targets: [{norm, writeKey, existingTags, rejectedTags, needed}], chunkSize, allowAutosuggest, mustTags, onProgress }
-async function aiRunFillIn(options) {
-  const idbData = await idbGetAll();
-  const instruction = aiBuildFillInInstruction(options.allowAutosuggest);
-  const targetsByNorm = {};
-  options.targets.forEach(t => { targetsByNorm[t.norm] = t; });
-  const normKeys = options.targets.map(t => t.norm);
-
-  const buildParts = async (chunkNorms) => {
-    const parts = [{ text: instruction }];
-    for (const norm of chunkNorms) {
-      const t = targetsByNorm[norm];
-      const blob = idbData['s:' + norm];
-      if (!blob) continue;
-      const imagePart = await aiPrepareImagePart(blob);
-      parts.push({
-        text: '番号: ' + t.writeKey +
-          '\n不足数: ' + t.needed +
-          '\n既存タグ（重複禁止）: ' + (t.existingTags.join('、') || 'なし') +
-          '\n除外タグ（絶対に使わないこと）: ' + (t.rejectedTags.join('、') || 'なし')
-      });
-      parts.push({ inlineData: imagePart });
-    }
-    return parts;
-  };
-
-  const loopResult = await aiRunBatchLoop(normKeys, options.chunkSize, buildParts, options.onProgress);
-  if (loopResult.aborted) return { aborted: true };
-
-  let successCount = 0;
-  const totalCount = normKeys.length;
-  const failedNorms = [];
-  const errors = [];
-
-  for (const outcome of loopResult.chunkOutcomes) {
-    if (!outcome.parsed.ok) {
-      failedNorms.push.apply(failedNorms, outcome.norms);
-      if (outcome.parsed.error && errors.indexOf(outcome.parsed.error) === -1) {
-        errors.push(outcome.parsed.error);
-      }
-      continue;
-    }
-
-    const normByWriteKey = {};
-    outcome.norms.forEach(n => {
-      const t = targetsByNorm[n];
-      normByWriteKey[t.writeKey] = n;
-      normByWriteKey[normKey(t.writeKey)] = n;
-    });
-    const coveredNorms = new Set();
-
-    for (const respKey of Object.keys(outcome.parsed.data)) {
-      const tagsRaw = outcome.parsed.data[respKey];
-      const resolvedNorm = normByWriteKey[respKey] || normByWriteKey[normKey(respKey)];
-      if (!resolvedNorm || !Array.isArray(tagsRaw)) continue;
-      const t = targetsByNorm[resolvedNorm];
-      const excludeSet = {};
-      t.existingTags.concat(t.rejectedTags, options.mustTags).forEach(tag => { excludeSet[tag] = true; });
-      const newValid = [];
-      for (const tag of tagsRaw) {
-        if (typeof tag !== 'string') continue;
-        if (excludeSet[tag]) continue;
-        const kind = aiValidateTagForContext(tag, options.allowAutosuggest);
-        if (kind === 'invalid') continue;
-        if (newValid.indexOf(tag) !== -1) continue;
-        newValid.push(tag);
-        if (newValid.length >= t.needed) break; // 必要数を超えて採用しない
-      }
-      state.tags[t.writeKey] = t.existingTags.concat(newValid);
-      coveredNorms.add(resolvedNorm);
-      successCount++;
-    }
-
-    outcome.norms.forEach(n => { if (!coveredNorms.has(n)) failedNorms.push(n); });
-
-    saveState();
-  }
-
-  return { successCount, totalCount, failedNorms, errors };
-}
 
 // --- モーダルUI ---
 let aiAutoCloseTimer = null;
@@ -4532,8 +4425,6 @@ function aiOpenTaggingModal() {
     const isEmoji = isEmojiInfo();
     document.getElementById('ai-tag-context-sticker').checked = !isEmoji;
     document.getElementById('ai-tag-context-emoji').checked = isEmoji;
-    document.getElementById('ai-tag-mode-fill').checked = true;
-    document.getElementById('ai-tag-mode-all').checked = false;
     document.getElementById('ai-tag-progress').style.display = 'none';
     document.getElementById('ai-tag-result').style.display = 'none';
     aiUpdateTargetSummary();
@@ -4542,9 +4433,8 @@ function aiOpenTaggingModal() {
 }
 
 function aiUpdateTargetSummary() {
-  const mode = document.querySelector('input[name="ai-tag-mode"]:checked').value;
   const index = aiBuildStickerIndex();
-  const normKeys = aiGetTargetNormKeys(mode, index);
+  const normKeys = aiGetTargetNormKeys(index);
   document.getElementById('ai-tag-target-summary').textContent = `対象: ${normKeys.length}枚`;
 }
 
@@ -4582,7 +4472,6 @@ async function aiHandleStartTagging() {
     return;
   }
 
-  const mode = document.querySelector('input[name="ai-tag-mode"]:checked').value; // 'fill' | 'all'
   const allowAutosuggest = document.getElementById('ai-tag-context-sticker').checked;
   const chunkSize = AI_CHUNK_SIZE;
   const index = aiBuildStickerIndex();
@@ -4599,48 +4488,20 @@ async function aiHandleStartTagging() {
   try {
     let result;
 
-    if (mode === 'all') {
-      const normKeys = aiGetTargetNormKeys('all', index);
-      if (normKeys.length === 0) {
-        alert('対象になるコマがありません。');
-        return;
-      }
-      result = await aiRunTagging({
-        normKeys,
-        chunkSize,
-        perStickerCount: perStickerTarget,
-        allowAutosuggest,
-        mustTags,
-        writeKeyOf: function (norm) { return index[norm].writeKey; },
-        onProgress: aiUpdateProgress
-      });
-    } else {
-      // 穴埋め: 目標数に届いていないコマだけ、足りない分だけ追加する
-      const fillTargets = Object.keys(index)
-        .filter(function (norm) { return index[norm].hasImage; })
-        .filter(function (norm) { return index[norm].existingTags.length < perStickerTarget; })
-        .sort(aiNumericSort)
-        .map(function (norm) {
-          return {
-            norm: norm,
-            writeKey: index[norm].writeKey,
-            existingTags: index[norm].existingTags.slice(),
-            rejectedTags: (state.aiRejectedTags[norm] || []).slice(),
-            needed: Math.max(1, perStickerTarget - index[norm].existingTags.length)
-          };
-        });
-      if (fillTargets.length === 0) {
-        alert('不足しているコマがありません。（全コマが目標数に達しています。「全部上書き」を選ぶと再実行できます）');
-        return;
-      }
-      result = await aiRunFillIn({
-        targets: fillTargets,
-        chunkSize,
-        allowAutosuggest,
-        mustTags,
-        onProgress: aiUpdateProgress
-      });
+    const normKeys = aiGetTargetNormKeys(index);
+    if (normKeys.length === 0) {
+      alert('対象になるコマがありません。');
+      return;
     }
+    result = await aiRunTagging({
+      normKeys,
+      chunkSize,
+      perStickerCount: perStickerTarget,
+      allowAutosuggest,
+      mustTags,
+      writeKeyOf: function (norm) { return index[norm].writeKey; },
+      onProgress: aiUpdateProgress
+    });
 
     if (result.aborted) {
       aiOpenApiKeyModal();
