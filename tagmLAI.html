@@ -3625,11 +3625,16 @@ function applyImportedJson(parsed, fallbackName) {
   // 形式判別：
   // (A) フラット形式 {"001": [...], ...}
   // (B) 完全形式 { version, collectionName, tags: {...}, userMustTags: [...] }
-  let tagsObj, importedName, importedMustTags;
+  // (C) 上記に加えて suggestions: {...} があれば、おすすめタグとして取り込む
+  //     （Canvas版のタグ付けちゃんが出力する。無い場合は素通り）
+  let tagsObj, importedName, importedMustTags, importedSuggestions = null;
   if (parsed.tags && typeof parsed.tags === 'object') {
     tagsObj = parsed.tags;
     importedName = parsed.collectionName;
     importedMustTags = Array.isArray(parsed.userMustTags) ? parsed.userMustTags : null;
+    if (parsed.suggestions && typeof parsed.suggestions === 'object' && !Array.isArray(parsed.suggestions)) {
+      importedSuggestions = parsed.suggestions;
+    }
   } else {
     tagsObj = parsed;
   }
@@ -3680,6 +3685,17 @@ function applyImportedJson(parsed, fallbackName) {
     });
 
   state.tags = normalized;
+
+  // おすすめタグ。state.tags は表示キー("01")だが、state.suggestions は normKey("1") で持つ。
+  // 古いセットの候補が残ると別のスタンプに紐づいて見えるので、インポートのたびに作り直す。
+  state.suggestions = {};
+  if (importedSuggestions) {
+    for (const k of Object.keys(importedSuggestions)) {
+      const arr = importedSuggestions[k];
+      if (!Array.isArray(arr)) continue;
+      state.suggestions[normKey(k)] = arr.filter(t => typeof t === 'string');
+    }
+  }
   if (importedName) {
     state.collectionName = importedName;
   } else if (fallbackName && !state.collectionName) {
@@ -3694,6 +3710,7 @@ function applyImportedJson(parsed, fallbackName) {
   return {
     success: true,
     keyCount: keys.length,
+    suggestionCount: Object.keys(state.suggestions).length,
     invalidCount: invalidTags.size,
     invalidTags: Array.from(invalidTags),
     autosuggestCount: autosuggestTags.size,
