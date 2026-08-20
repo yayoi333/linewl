@@ -4113,6 +4113,27 @@ const AI_RETRY_WAITS_MS = [8000, 20000, 45000];
 // 無料枠ではトークンを増やすほど混雑・制限に当たりやすいので 0（無効）にする。
 // 課金枠なら -1（モデルが必要量を自動決定）にすると照合精度が上がる可能性がある。
 const AI_THINKING_BUDGET = 0;
+// 絵柄やキャラの見た目に対する「感想」で、どのコマにも当てはまってしまう語。
+// 実測で「かわいい」「にっこり」が16枚中16枚に付き、採用9個の枠を食っていた。
+// ハートやきらきらは実際に描かれていることがあるので、ここには入れない。
+const AI_VAGUE_TAGS = ['かわいい', 'にっこり', 'キュート', 'ラブリー', '素敵', '萌える', 'エモイ', 'うっとり'];
+// 採用分の中に許す感想語の数。0 にすると絵柄が本当に主題のスタンプで不利になる。
+const AI_VAGUE_MAX = 1;
+
+// 候補（確信度順）から採用分を選ぶ。感想語が AI_VAGUE_MAX を超えたら後ろへ回し、
+// 次の候補を繰り上げる。枠が余ったら回した分を戻すので、個数は減らない。
+function aiPickAdopted(candidates, count) {
+  const isVague = t => AI_VAGUE_TAGS.indexOf(t) !== -1;
+  const out = [], held = [];
+  for (const t of candidates) {
+    if (out.length >= count) break;
+    if (isVague(t) && out.filter(isVague).length >= AI_VAGUE_MAX) { held.push(t); continue; }
+    out.push(t);
+  }
+  for (const t of held) { if (out.length >= count) break; out.push(t); }
+  return out;
+}
+
 function aiGetCandidateCount(perStickerCount) {
   return Math.max(perStickerCount, Math.min(AI_CANDIDATE_MAX, perStickerCount * 2));
 }
@@ -4167,6 +4188,7 @@ ${candidateCount}個の内訳の目安:
 ・季節・行事のタグ（夏、冬、春、秋、夏祭り、花火、年末年始 など）は、画像にその要素がはっきり描かれている場合を除いて選ばない。今の季節に合わせて入れるのは禁止。
 ・動物・キャラクター種別のタグ（イヌ、ネコ、クマ、ウサギ、トリ など）は、その動物だと確実に判別できる場合に1個だけ。迷ったら選ばない。複数の動物名を並べるのは禁止。
 ・表情の読み違いに注意する。口を大きく開けた笑顔を怒りと取り違えないこと。画像内の文字がポジティブな内容なら、表情もポジティブ側に解釈すること。
+・絵柄やキャラクターの見た目に対する感想（かわいい・にっこり・キュート・ラブリー・素敵・萌える・エモイ など）は、18個のうち2個まで。どのコマにも当てはまってしまい、検索キーとして機能しないため。ただし「ハート」「きらきら」のように実際に描かれている装飾物は、この制限の対象外なので、描かれていれば選んでよい。
 ・画像内の文字が専門用語・固有名詞などで、リストに対応する語が無い場合は、無理に音や字面が近い語を当てないこと。その場合は絵柄・表情・ポーズから選ぶ。
 
 最重要ルール:
@@ -4373,7 +4395,7 @@ async function aiRunTagging(options) {
         重複の中身: dropDuplicate.join('/')
       });
       // 先頭 perStickerCount 個を採用、全件を差し替え候補として保持する
-      state.tags[writeKey] = validTags.slice(0, options.perStickerCount);
+      state.tags[writeKey] = aiPickAdopted(validTags, options.perStickerCount);
       state.suggestions[resolvedNorm] = validTags.slice();
       coveredNorms.add(resolvedNorm);
       successCount++;
